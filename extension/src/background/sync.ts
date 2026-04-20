@@ -1,0 +1,43 @@
+import { ConsentEvent } from "../lib/types";
+import { getState, markSynced } from "../lib/storage";
+
+// In production, this would be your Vercel/Railway URL
+const API_BASE = "http://localhost:3000";
+
+export async function syncEvent(event: ConsentEvent): Promise<boolean> {
+  console.log(`[Consently] Syncing event for ${event.appName} to ${API_BASE}...`);
+  try {
+    const res = await fetch(`${API_BASE}/api/consents`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(event),
+    });
+    
+    if (res.ok) {
+      console.log(`[Consently] Sync successful for ${event.appName}`);
+      return true;
+    } else {
+      const errorText = await res.text();
+      console.error(`[Consently] Sync failed for ${event.appName}: ${res.status} ${res.statusText}`, errorText);
+      return false;
+    }
+  } catch (e) {
+    console.error("[Consently] Network error during sync", e);
+    return false;
+  }
+}
+
+export async function flushUnsynced(): Promise<void> {
+  const state = await getState();
+  const unsynced = state.events.filter(e => !e.synced);
+  
+  if (unsynced.length === 0) return;
+  
+  console.log(`[Consently] Flushing ${unsynced.length} unsynced events...`);
+  for (const event of unsynced) {
+    const success = await syncEvent(event);
+    if (success) {
+      await markSynced(event.id);
+    }
+  }
+}

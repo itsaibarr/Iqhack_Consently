@@ -1,0 +1,52 @@
+{
+  "manifest_version": 3,
+  "name": "Consently",
+  "version": "0.1.0",
+  "description": "See what data apps request when you sign in. Automatically.",
+  "permissions": [
+    "webNavigation", 
+    "storage", 
+    "notifications",
+    "scripting",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://accounts.google.com/*",
+    "https://github.com/*",
+    "https://myaccount.google.com/permissions*"
+  ],
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_icon": {
+      "32": "public/icons/icon32.png"
+    }
+  },
+  "background": {
+    "service_worker": "src/background/index.ts",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://accounts.google.com/*",
+        "https://github.com/login/oauth/authorize*",
+        "https://resend.com/*"
+      ],
+      "js": ["src/content/index.tsx"]
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content/index.tsx"]
+    }
+  ],
+  "icons": {
+    "32": "public/icons/icon32.png",
+    "128": "public/icons/icon128.png"
+  },
+  "externally_connectable": {
+    "matches": [
+      "http://localhost:3000/*",
+      "https://consently-app.vercel.app/*"
+    ]
+  }
+}

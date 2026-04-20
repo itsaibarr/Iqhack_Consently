@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand Palette */
+  --color-primary-50:  #EEF3FF;
+  --color-primary-100: #DBE7FF;
+  --color-primary-200: #BFCFFF;
+  --color-primary-400: #6B8EF5;
+  --color-primary-500: #3B6BF5;
+  --color-primary-600: #2851D6;
+  --color-primary-700: #1A38A8;
+
+  --color-accent-500:  #14A89C;
+
+  --color-risk-red-50:  #FFF1F2;
+  --color-risk-red-500: #EF4444;
+  
+  --color-success-50:  #F0FDF4;
+  --color-success-500: #22C55E;
+
+  --color-neutral-0:   #FFFFFF;
+  --color-neutral-25:  #FAFAFA;
+  --color-neutral-50:  #F5F5F7;
+  --color-neutral-100: #EBEBED;
+  --color-neutral-200: #D1D1D6;
+  --color-neutral-400: #8E8E93;
+  --color-neutral-600: #48484A;
+  --color-neutral-800: #1C1C1E;
+  --color-neutral-900: #111113;
+
+  /* Typography */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* Shadows */
+  --shadow-sm: 0px 1px 2px rgba(16, 24, 40, 0.06);
+  --shadow-md: 0px 4px 8px rgba(16, 24, 40, 0.08), 0px 1px 3px rgba(16, 24, 40, 0.04);
+}
+
+@layer base {
+  body {
+    @apply antialiased font-sans bg-neutral-25 text-neutral-800;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply flex items-center justify-center gap-2 rounded-md bg-primary-500 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-primary-600 active:scale-95 shadow-sm;
+  }
+
+  .service-card {
+    @apply bg-neutral-0 border border-neutral-100 rounded-lg p-4 shadow-sm transition-all hover:shadow-md hover:bg-primary-50/30;
+  }
+}

@@ -19,6 +19,7 @@ export const metadata: Metadata = {
 };
 
 import { ConsentProvider } from "@/context/ConsentContext";
+import { SidebarWrapper } from "@/components/layout/SidebarWrapper";
 
 export default function RootLayout({
   children,
@@ -29,10 +30,9 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${mono.variable} antialiased selection:bg-brand-accent/30`}>
         <ConsentProvider>
-          <Sidebar /> {/* Sidebar (CMD Center) */}
-          <div className="pl-72">
+          <SidebarWrapper>
             {children}
-          </div>
+          </SidebarWrapper>
         </ConsentProvider>
       </body>
     </html>

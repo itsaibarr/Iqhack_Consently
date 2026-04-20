@@ -6,7 +6,6 @@ import { Container } from "@/components/layout/Container";
 import { CompanyCard } from "@/components/consent/CompanyCard";
 import { NodeGraph } from "@/components/consent/NodeGraph";
 import { ServiceDetailDrawer } from "@/components/consent/ServiceDetailDrawer";
-import { MOCK_COMPANIES } from "@/lib/constants";
 import { calculateGlobalPrivacyScore } from "@/lib/privacy";
 import { ShieldCheck, Zap, AlertTriangle, Fingerprint, Plus } from "lucide-react";
 
@@ -42,13 +41,30 @@ function CountUp({ value, duration = 1.5 }: { value: number; duration?: number }
 }
 
 import { useConsent } from "@/context/ConsentContext";
+import { useRouter } from "next/navigation";
+import { Copy, ExternalLink } from "lucide-react";
 
 export default function Home() {
-  const { companies, revokeConsent } = useConsent();
+  const { companies, revokeConsent, user } = useConsent();
+  const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // Auth Guard: If not logged in, redirect after a short delay to allow session resolution
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!user) {
+        router.push("/auth");
+      }
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [user, router]);
 
   const activeCount = companies.filter((c) => c.status === "ACTIVE").length;
   const highRiskCount = companies.filter((c) => c.risk === "HIGH" && c.status === "ACTIVE").length;
+  const dataPointsCount = companies
+    .filter((c) => c.status === "ACTIVE")
+    .reduce((acc, c) => acc + (c.dataTypes?.length || 0), 0);
+
   const privacyScore = useMemo(() => calculateGlobalPrivacyScore(companies), [companies]);
 
   const selectedService = companies.find(c => c.id === selectedId) || null;
@@ -59,30 +75,21 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-[#FDFDFD] dark:bg-black pb-32">
+    <main className="min-h-screen bg-[#FDFDFD] pb-32">
       {/* Page Header */}
-      <div className="border-b border-neutral-100 bg-white py-20 dark:bg-neutral-950 dark:border-neutral-900">
+      <div className="border-b border-neutral-100 bg-white pt-20 pb-10">
         <Container>
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-12">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
             <motion.div 
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="space-y-4"
+              className="space-y-2"
             >
-              <div className="flex items-center gap-3">
-                <span className="flex h-5 items-center rounded-md bg-neutral-100 px-2 font-mono text-[9px] font-black uppercase tracking-widest text-neutral-500 dark:bg-neutral-800">
-                  Core Dashboard
-                </span>
-                <span className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-brand-primary">
-                  Sovereignty Scan Active
-                </span>
-              </div>
-              <h1 className="text-5xl font-extrabold tracking-tight text-neutral-900 dark:text-white lg:text-7xl">
-                Consent Inventory
+              <h1 className="text-display-lg text-neutral-900 leading-tight">
+                Welcome back, {user?.email?.split("@")[0] || "Citizen"}
               </h1>
-              <p className="text-lg font-medium text-neutral-500 max-w-sm leading-relaxed">
-                Your digital identity hub. Monitor and manage how companies interact with your data.
+              <p className="text-body-md text-neutral-600 max-w-md">
+                Your data sovereignty is active. You have full control over how services interact with your digital identity.
               </p>
             </motion.div>
             
@@ -91,61 +98,48 @@ export default function Home() {
               animate={{ opacity: 1, x: 0 }}
               className="flex gap-4"
             >
-              <button className="group flex h-14 items-center gap-2 rounded-2xl border border-neutral-200 px-8 text-sm font-bold text-neutral-900 transition-all hover:bg-neutral-50 dark:border-neutral-800 dark:text-white dark:hover:bg-neutral-900">
-                <Plus size={18} className="transition-transform group-hover:rotate-90" />
+              <button className="btn-ghost flex h-11 items-center gap-2 px-6">
+                <Plus size={16} />
                 Connect Service
               </button>
-              <button className="flex h-14 items-center gap-2 rounded-2xl bg-red-500 px-8 text-sm font-bold text-white shadow-xl shadow-red-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
-                <AlertTriangle size={18} />
+              <button className="btn-danger flex h-11 items-center gap-2 px-6">
+                <AlertTriangle size={16} />
                 Revoke All
               </button>
             </motion.div>
           </div>
 
-          <div className="mt-20 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard 
-              index={0}
-              label="Active Connections" 
+          <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <TopSummaryCard 
+              label="Services Connected" 
               value={activeCount} 
-              icon={ShieldCheck} 
-              color="#10B981" 
+              detail={`Since ${companies[0]?.connectedAt || "Sep 2022"}`}
             />
-            <StatCard 
-              index={1}
+            <TopSummaryCard 
+              label="Data Types Shared" 
+              value={dataPointsCount} 
+              detail="Across all active consents"
+            />
+            <TopSummaryCard 
               label="High Risk Services" 
               value={highRiskCount} 
-              icon={AlertTriangle} 
-              color="#EF4444" 
-            />
-            <StatCard 
-              index={2}
-              label="Data Points Collected" 
-              value={18} 
-              icon={Fingerprint} 
-              color="#2851D6" 
-            />
-            <StatCard 
-              index={3}
-              label="Final Privacy Score" 
-              value={<CountUp value={privacyScore} />} 
-              status={privacyScore > 70 ? "SECURE" : "AT RISK"} 
-              icon={Zap} 
-              color={privacyScore > 70 ? "#10B981" : "#EF4444"} 
+              detail={highRiskCount > 0 ? "Review recommended" : "No urgent action needed"}
+              isRisk={highRiskCount > 0}
             />
           </div>
         </Container>
       </div>
 
       {/* Main Content Area */}
-      <Container className="py-24">
-        <div className="grid grid-cols-1 gap-20 lg:grid-cols-12">
+      <Container className="py-16">
+        <div className="grid grid-cols-1 gap-16 lg:grid-cols-12">
           {/* Visual Graph Area */}
-          <div className="lg:col-span-8 space-y-10">
+          <div className="lg:col-span-8 space-y-8">
             <div className="flex items-center gap-6">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-400">
+              <h2 className="text-label-sm text-neutral-400">
                 Neural Data Web
               </h2>
-              <div className="h-[1px] flex-1 bg-neutral-100 dark:bg-neutral-800/60" />
+              <div className="h-[1px] flex-1 bg-neutral-100" />
             </div>
             <NodeGraph 
               companies={companies} 
@@ -159,22 +153,22 @@ export default function Home() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.4 }}
-              className="rounded-[32px] border border-neutral-100 bg-neutral-50/50 p-10 dark:border-neutral-900 dark:bg-neutral-900/30 backdrop-blur-xl"
+              className="rounded-[var(--radius-xl)] border border-neutral-100 bg-white p-8 shadow-sm"
             >
-              <h3 className="text-xl font-bold text-neutral-900 dark:text-white tracking-tight">Interactive Topology</h3>
-              <p className="mt-6 text-sm leading-relaxed text-neutral-500 font-medium">
+              <h3 className="text-h3 text-neutral-900 tracking-tight">Interactive Topology</h3>
+              <p className="mt-4 text-body-sm leading-relaxed text-neutral-500 font-medium">
                 The map displays real-time data ingestion pipelines. Each node represents a separate legal entity accessing your footprint.
               </p>
               
-              <div className="mt-12 space-y-6">
-                <LegendItem color="#EF4444" label="Critical exposure risk" />
-                <LegendItem color="#2851D6" label="Your Sovereignty Hub" />
-                <LegendItem color="#E5E5E5" label="Neutral data collector" animate />
+              <div className="mt-10 space-y-6">
+                <LegendItem color="var(--color-risk-red-500)" label="Critical exposure risk" />
+                <LegendItem color="var(--color-primary-500)" label="Your Sovereignty Hub" />
+                <LegendItem color="var(--color-neutral-200)" label="Neutral data collector" animate />
               </div>
               
-              <div className="mt-12 pt-10 border-t border-neutral-100 dark:border-neutral-800">
-                <h4 className="text-xs font-bold uppercase tracking-widest text-neutral-400">System Tip</h4>
-                <p className="mt-3 text-xs leading-relaxed text-neutral-500">
+              <div className="mt-10 pt-8 border-t border-neutral-100">
+                <h4 className="text-label-sm text-neutral-400">System Tip</h4>
+                <p className="mt-3 text-label-md text-neutral-500">
                   Tap a node to see the &quot;Plain Language&quot; impact report and disconnect services instantly.
                 </p>
               </div>
@@ -183,32 +177,38 @@ export default function Home() {
         </div>
 
         {/* Inventory Section */}
-        <div className="mt-40">
-          <div className="mb-16 flex items-center gap-6">
-            <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-400">
+        <div className="mt-24">
+          <div className="mb-12 flex items-center gap-6">
+            <h2 className="text-label-sm text-neutral-400">
               Granular Service Inventory
             </h2>
-            <div className="h-[1px] flex-1 bg-neutral-100 dark:bg-neutral-800" />
+            <div className="h-[1px] flex-1 bg-neutral-100" />
           </div>
 
-          <motion.div layout className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            <AnimatePresence mode="popLayout">
-              {companies.map((company) => (
-                <motion.div
-                  layout
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8, filter: "blur(10px)", transition: { duration: 0.3 } }}
-                  key={company.id}
-                >
-                  <CompanyCard 
-                    record={company} 
-                    onRevoke={handleRevoke}
-                    onViewDetails={(id) => setSelectedId(id)}
-                  />
-                </motion.div>
-              ))}
-            </AnimatePresence>
+          <motion.div layout className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {activeCount === 0 ? (
+              <div className="col-span-full">
+                <EmptyInventoryState />
+              </div>
+            ) : (
+              <AnimatePresence mode="popLayout">
+                {companies.map((company) => (
+                  <motion.div
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8, filter: "blur(10px)", transition: { duration: 0.3 } }}
+                    key={company.id}
+                  >
+                    <CompanyCard 
+                      record={company} 
+                      onRevoke={handleRevoke}
+                      onViewDetails={(id) => setSelectedId(id)}
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            )}
           </motion.div>
         </div>
       </Container>
@@ -223,6 +223,68 @@ export default function Home() {
   );
 }
 
+function EmptyInventoryState() {
+  const EXTENSION_ID = "kegngnalimkofmfaeefinlljgdhomgon";
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(EXTENSION_ID);
+  };
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="flex flex-col items-center justify-center py-32 rounded-[var(--radius-xl)] border border-dashed border-neutral-100 bg-neutral-50/20 transition-all hover:bg-neutral-50/40"
+    >
+      <div className="relative mb-12">
+        <motion.div 
+          animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute -inset-8 rounded-full bg-[var(--color-primary-50)] blur-3xl" 
+        />
+        <div className="relative flex h-24 w-24 items-center justify-center rounded-[var(--radius-xl)] bg-white shadow-md">
+          <Zap size={40} className="text-[var(--color-primary-500)]" />
+        </div>
+      </div>
+      
+      <h3 className="text-h3 text-neutral-900 tracking-tight">Active Handshake Required</h3>
+      <p className="mt-4 max-w-md text-center text-body-md text-neutral-500">
+        Consently is listening for your browser extension. Once you install and sync your first service, your sovereignty map will activate.
+      </p>
+
+      <div className="mt-10 flex flex-col gap-4 w-full max-w-sm">
+        <div className="flex items-center justify-between rounded-[var(--radius-lg)] border border-neutral-100 bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-1">
+            <span className="text-label-sm text-neutral-400">Extension ID</span>
+            <code className="text-mono-sm font-bold text-neutral-600">{EXTENSION_ID}</code>
+          </div>
+          <button 
+            onClick={copyToClipboard}
+            className="rounded-[var(--radius-md)] p-2 hover:bg-neutral-50 transition-colors text-neutral-400"
+          >
+            <Copy size={16} />
+          </button>
+        </div>
+
+        <a 
+          href={`https://chrome.google.com/webstore/detail/${EXTENSION_ID}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn-primary flex items-center justify-center gap-3 py-4"
+        >
+          <ExternalLink size={18} />
+          Install from Web Store
+        </a>
+      </div>
+
+      <div className="mt-16 flex items-center gap-4 rounded-[var(--radius-lg)] bg-white/50 px-5 py-3 border border-neutral-100">
+        <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+        <span className="text-label-sm text-neutral-400">Socket Protocol: Listening...</span>
+      </div>
+    </motion.div>
+  );
+}
+
 function LegendItem({ color, label, animate }: { color: string; label: string; animate?: boolean }) {
   return (
     <div className="flex items-center gap-4 group cursor-default">
@@ -230,58 +292,37 @@ function LegendItem({ color, label, animate }: { color: string; label: string; a
         className={cn("h-2.5 w-2.5 rounded-full ring-4 ring-offset-2 ring-transparent transition-all group-hover:ring-neutral-100", animate && "animate-pulse")} 
         style={{ backgroundColor: color }} 
       />
-      <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500">{label}</span>
+      <span className="text-label-sm text-neutral-500">{label}</span>
     </div>
   );
 }
 
-function StatCard({ 
+function TopSummaryCard({ 
   label, 
   value, 
-  icon: Icon, 
-  color,
-  status,
-  index
+  detail,
+  isRisk
 }: { 
   label: string; 
   value: React.ReactNode; 
-  icon: React.ElementType; 
-  color: string;
-  status?: string;
-  index: number;
+  detail: string;
+  isRisk?: boolean;
 }) {
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ delay: index * 0.1, duration: 0.5, ease: "easeOut" }}
-      className="group relative overflow-hidden rounded-3xl border border-neutral-100 bg-white p-8 dark:border-neutral-900 dark:bg-neutral-900 shadow-[0_2px_10px_rgb(0,0,0,0.02)] transition-all hover:border-neutral-200 hover:shadow-xl"
-    >
-      <div className="flex items-center justify-between text-neutral-400">
-        <span className="text-[10px] font-black uppercase tracking-widest leading-none opacity-60 group-hover:opacity-100 transition-opacity">{label}</span>
-        <Icon size={16} className="group-hover:scale-110 transition-transform" />
-      </div>
-      <div className="mt-8 flex items-end justify-between">
-        <span className="text-5xl font-extrabold tracking-tighter text-neutral-900 dark:text-white leading-none">
-          {value}
-        </span>
-        {status && (
-          <span 
-            className="rounded-full px-3 py-1.5 text-[9px] font-black uppercase tracking-tight"
-            style={{ backgroundColor: `${color}15`, color }}
-          >
-            {status}
-          </span>
-        )}
-      </div>
-      
-      {/* Subtle background decoration */}
-      <div 
-        className="absolute -right-4 -bottom-4 h-24 w-24 rounded-full opacity-[0.03] transition-transform group-hover:scale-150"
-        style={{ backgroundColor: color }}
-      />
-    </motion.div>
+    <div className="group relative flex flex-col items-center justify-center rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.06)]">
+      <span className="text-display-lg font-bold text-neutral-900 leading-none">
+        {value}
+      </span>
+      <span className="mt-2 text-body-sm font-medium text-neutral-600">
+        {label}
+      </span>
+      <span className={cn(
+        "mt-1 text-label-sm tracking-tight",
+        isRisk ? "text-[var(--color-risk-red-500)] font-bold" : "text-neutral-400"
+      )}>
+        {isRisk && "⚠ "}{detail}
+      </span>
+    </div>
   );
 }
 

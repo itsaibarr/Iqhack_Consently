@@ -1,4 +1,4 @@
-import { CompanyRecord, MOCK_COMPANIES } from "./constants";
+import { CompanyRecord } from "./constants";
 
 /**
  * Weights for different data categories.
@@ -29,6 +29,15 @@ export const PLAIN_LANGUAGE_MAP: Record<string, string> = {
   phone_number: "The primary way to contact and identify your account.",
   contacts: "Your entire list of friends and family contact details.",
 };
+
+/**
+ * Generates a plain-language summary for a company's data access.
+ * Formula: [Service] has access to your [data types]. They use it for [purpose]. Last used [time].
+ */
+export function getConsentDescription(company: CompanyRecord): string {
+  const dataTypesStr = company.dataTypes.map(dt => dt.name.replace("_", " ")).join(", ");
+  return `${company.name} has access to your ${dataTypesStr}. They use it for ${company.purpose}. Last used ${company.lastAccessed}.`;
+}
 
 /**
  * Penalty points for risk levels.

@@ -2,7 +2,7 @@
 
 import React, { useMemo, useRef, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { MOCK_COMPANIES } from "@/lib/constants";
+import { CompanyRecord } from "@/lib/constants";
 import { calculateCompanyImpact } from "@/lib/privacy";
 import { motion } from "framer-motion";
 
@@ -17,11 +17,26 @@ const RISK_COLORS = {
   LOW: "#10B981",    // Emerald 500
 };
 
+interface GraphNode {
+  id: string;
+  name: string;
+  isUser: boolean;
+  val: number;
+  risk?: string;
+  x?: number;
+  y?: number;
+}
+
+interface GraphLink {
+  source: GraphNode | string;
+  target: GraphNode | string;
+}
+
 export function NodeGraph({ 
   companies, 
   onNodeClick 
 }: { 
-  companies: typeof MOCK_COMPANIES,
+  companies: CompanyRecord[],
   onNodeClick?: (id: string) => void
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -103,39 +118,48 @@ export function NodeGraph({
         backgroundColor="#ffffff00"
         nodeLabel="name"
         onNodeClick={(node: any) => {
-          if (!node.isUser && onNodeClick) {
-            onNodeClick(node.id);
+          const graphNode = node as GraphNode;
+          if (!graphNode.isUser && onNodeClick) {
+            onNodeClick(graphNode.id);
           }
         }}
-        nodeCanvasObject={(node: any, ctx, globalScale) => {
-          const label = node.name;
+        nodeCanvasObject={(node, ctx, globalScale) => {
+          const graphNode = node as GraphNode;
+          const label = graphNode.name;
           const fontSize = 11 / globalScale;
-          const radius = node.val / 2;
+          const radius = graphNode.val / 2;
           
           // Animation timing for pulse
           const time = Date.now() * 0.002;
-          const pulse = node.risk === "HIGH" ? Math.sin(time) * 2 : 0;
+          const pulse = graphNode.risk === "HIGH" ? Math.sin(time) * 2 : 0;
 
           // Draw Pulse Aura for High Risk
-          if (node.risk === "HIGH") {
+          if (graphNode.risk === "HIGH") {
             ctx.beginPath();
-            ctx.arc(node.x, node.y, radius + 4 + Math.sin(time * 2) * 2, 0, 2 * Math.PI, false);
+            ctx.arc(graphNode.x || 0, graphNode.y || 0, radius + 4 + Math.sin(time * 2) * 2, 0, 2 * Math.PI, false);
             ctx.fillStyle = "rgba(239, 68, 68, 0.15)";
             ctx.fill();
           }
 
-          // User Node Glow
-          if (node.isUser) {
-            ctx.shadowColor = "rgba(40, 81, 214, 0.4)";
-            ctx.shadowBlur = 20 / globalScale;
+          // User Node Glow & Advanced Pulse
+          if (graphNode.isUser) {
+            const glowPulse = Math.sin(time * 1.5) * 4;
+            ctx.shadowColor = "rgba(40, 81, 214, 0.6)";
+            ctx.shadowBlur = (25 + glowPulse) / globalScale;
+
+            // Inner core pulse
+            ctx.beginPath();
+            ctx.arc(graphNode.x || 0, graphNode.y || 0, radius + 2 + Math.sin(time * 3) * 1, 0, 2 * Math.PI);
+            ctx.fillStyle = "rgba(40, 81, 214, 0.1)";
+            ctx.fill();
           }
 
           // Main Node Circle
           ctx.beginPath();
-          ctx.arc(node.x, node.y, radius + (node.risk === "HIGH" ? pulse * 0.5 : 0), 0, 2 * Math.PI, false);
-          ctx.fillStyle = node.isUser 
+          ctx.arc(graphNode.x || 0, graphNode.y || 0, radius + (graphNode.risk === "HIGH" ? pulse * 0.5 : 0), 0, 2 * Math.PI, false);
+          ctx.fillStyle = graphNode.isUser 
             ? "#2851D6" 
-            : RISK_COLORS[node.risk as keyof typeof RISK_COLORS] || "#E5E5E5";
+            : RISK_COLORS[graphNode.risk as keyof typeof RISK_COLORS] || "#E5E5E5";
           ctx.fill();
 
           // Border for crispness
@@ -149,16 +173,17 @@ export function NodeGraph({
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
             ctx.fillStyle = "#A3A3A3";
-            ctx.fillText(label, node.x, node.y + radius + 14 / globalScale);
+            ctx.fillText(label, graphNode.x || 0, (graphNode.y || 0) + radius + 14 / globalScale);
           }
 
           ctx.shadowBlur = 0; // Reset
         }}
-        linkCanvasObject={(link: any, ctx) => {
-          const start = link.source;
-          const end = link.target;
+        linkCanvasObject={(link, ctx) => {
+          const graphLink = link as unknown as { source: GraphNode, target: GraphNode };
+          const start = graphLink.source;
+          const end = graphLink.target;
 
-          if (typeof start !== "object" || typeof end !== "object") return;
+          if (!start.x || !start.y || !end.x || !end.y) return;
 
           ctx.beginPath();
           ctx.moveTo(start.x, start.y);

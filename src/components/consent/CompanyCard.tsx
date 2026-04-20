@@ -1,12 +1,12 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Shield, ShieldAlert, ShieldCheck, ChevronRight, Share2, Info } from "lucide-react";
 import { CompanyRecord } from "@/lib/constants";
 import { revokeConsent } from "@/actions/consent";
 import { useState } from "react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { ChevronRight } from "lucide-react";
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -18,42 +18,45 @@ interface CompanyCardProps {
   onViewDetails?: (id: string) => void;
 }
 
-const CATEGORY_COLORS = {
-  PII: { bg: "var(--tag-pii-bg)", border: "var(--tag-pii-border)" },
-  HEALTH: { bg: "var(--tag-health-bg)", border: "var(--tag-health-border)" },
-  FINANCIAL: { bg: "var(--tag-financial-bg)", border: "var(--tag-financial-border)" },
-  DIGITAL: { bg: "var(--tag-digital-bg)", border: "var(--tag-digital-border)" },
-  SOCIAL: { bg: "var(--tag-social-bg)", border: "var(--tag-social-border)" },
+const CATEGORY_COLORS: Record<string, { bg: string, text: string }> = {
+  identity: { bg: "var(--datatype-identity)", text: "#3730A3" },
+  location: { bg: "var(--datatype-location)", text: "#92400E" },
+  financial: { bg: "var(--datatype-financial)", text: "#166534" },
+  academic: { bg: "var(--datatype-academic)", text: "#5B21B6" },
+  behavioral: { bg: "var(--datatype-behavioral)", text: "#9A3412" },
+  health: { bg: "var(--datatype-health)", text: "#831843" },
+  biometric: { bg: "var(--datatype-biometric)", text: "#881337" },
+  contacts: { bg: "var(--datatype-contacts)", text: "#0C4A6E" },
 };
 
 const RISK_CONFIG = {
   HIGH: {
-    icon: ShieldAlert,
-    bg: "var(--status-risk-high-bg)",
-    border: "var(--status-risk-high)",
-    text: "var(--status-risk-high-text)",
-    label: "High Risk",
+    bg: "var(--risk-high-bg)",
+    text: "var(--risk-high-text)",
+    border: "var(--risk-high-border)",
+    label: "HIGH",
+    color: "var(--color-risk-red-500)"
   },
   MEDIUM: {
-    icon: Shield,
-    bg: "var(--status-risk-medium-bg)",
-    border: "var(--status-risk-medium)",
-    text: "var(--status-risk-medium-text)",
-    label: "Medium Risk",
+    bg: "var(--risk-medium-bg)",
+    text: "var(--risk-medium-text)",
+    border: "var(--risk-medium-border)",
+    label: "MEDIUM",
+    color: "var(--color-risk-amber-500)"
   },
   LOW: {
-    icon: ShieldCheck,
-    bg: "var(--status-risk-low-bg)",
-    border: "var(--status-risk-low)",
-    text: "var(--status-risk-low-text)",
-    label: "Low Risk",
+    bg: "var(--risk-low-bg)",
+    text: "var(--risk-low-text)",
+    border: "var(--risk-low-border)",
+    label: "LOW",
+    color: "var(--color-success-500)"
   },
 };
 
 export function CompanyCard({ record, onRevoke, onViewDetails }: CompanyCardProps) {
   const [isRevoking, setIsRevoking] = useState(false);
+  const isRevoked = record.status === "REVOKED";
   const config = RISK_CONFIG[record.risk];
-  const Icon = config.icon;
 
   const handleRevoke = async () => {
     setIsRevoking(true);
@@ -70,46 +73,50 @@ export function CompanyCard({ record, onRevoke, onViewDetails }: CompanyCardProp
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -2 }}
-      className="group relative flex flex-col gap-4 rounded-[12px] border border-neutral-100 bg-white p-5 shadow-sm transition-all hover:border-neutral-200 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900"
+      className={cn(
+        "group relative flex flex-col gap-6 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-card)] p-6 shadow-sm transition-all hover:bg-[var(--bg-card-hover)] hover:shadow-md",
+        isRevoked && "opacity-60 grayscale bg-[var(--color-neutral-50)]",
+        isRevoking && "animate-revoke"
+      )}
+      style={{
+        borderLeft: !isRevoked ? `4px solid ${config.color}` : "4px solid var(--color-neutral-200)"
+      }}
     >
       <div className="flex items-start justify-between">
         <div className="flex gap-4">
           <div 
-            className="flex h-12 w-12 items-center justify-center rounded-lg bg-neutral-50 font-mono text-[10px] font-bold uppercase dark:bg-neutral-800"
+            className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-neutral-50)] font-bold text-lg text-[var(--text-primary)] border border-[var(--border-subtle)]"
           >
-            {record.logoUid.substring(0, 2)}
+            {record.logoUid.substring(0, 2).toUpperCase()}
           </div>
           <div className="space-y-0.5">
-            <h3 className="text-base font-bold tracking-tight text-neutral-900 dark:text-white">
+            <h3 className="text-h4 text-[var(--text-primary)]">
               {record.name}
             </h3>
-            <p className="text-xs font-medium text-neutral-500 uppercase tracking-widest">
+            <p className="text-[11px] font-medium text-[var(--text-secondary)] uppercase tracking-widest">
               {record.category}
             </p>
           </div>
         </div>
 
         <div 
-          className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider"
-          style={{ backgroundColor: config.bg, color: config.text }}
+          className="flex items-center rounded-full px-2.5 py-0.5 text-label-sm border"
+          style={{ backgroundColor: config.bg, color: config.text, borderColor: config.border }}
         >
-          <Icon size={12} />
-          {config.label}
+          <span className="mr-1.5 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: config.color }} />
+          {isRevoked ? "REVOKED" : config.label}
         </div>
       </div>
 
-      <p className="text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
-        {record.description}
-      </p>
-
       <div className="flex flex-wrap gap-2">
         {record.dataTypes.map((dt) => {
-          const colors = CATEGORY_COLORS[dt.category];
+          const cat = dt.category.toLowerCase();
+          const colors = CATEGORY_COLORS[cat] || { bg: "var(--color-neutral-100)", text: "var(--text-secondary)" };
           return (
             <span 
               key={dt.name}
-              className="rounded-[6px] border px-2 py-0.5 text-[10px] font-bold text-neutral-800 dark:text-neutral-200"
-              style={{ backgroundColor: colors.bg, borderColor: colors.border }}
+              className="rounded-[var(--radius-sm)] px-2.5 py-1 text-label-md"
+              style={{ backgroundColor: colors.bg, color: colors.text }}
             >
               {dt.name.replace("_", " ")}
             </span>
@@ -117,42 +124,36 @@ export function CompanyCard({ record, onRevoke, onViewDetails }: CompanyCardProp
         })}
       </div>
 
-      <div className="mt-auto space-y-4 pt-4">
-        <div className="flex items-center justify-between border-t border-neutral-50 pt-4 dark:border-neutral-800">
-          <div className="flex items-center gap-2">
-            <Share2 size={12} className="text-neutral-400" />
-            <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-tight">
-              Shared with {record.sharedWith.length} entities
-            </p>
-          </div>
+      <div className="space-y-1">
+          <p className="text-body-sm text-[var(--text-secondary)]">
+            Shared with: <span className="font-medium">{record.sharedWith.join(", ")}</span>
+          </p>
+          <p className="text-mono-sm text-[var(--text-tertiary)]">
+            Connected: {record.connectedAt}
+          </p>
+      </div>
+
+      <div className="mt-auto pt-4 border-t border-[var(--border-subtle)] flex items-center justify-between">
           <button 
             onClick={() => onViewDetails?.(record.id)}
-            className="text-neutral-300 hover:text-neutral-500 transition-colors"
+            className="text-label-md font-medium text-[var(--text-link)] hover:underline flex items-center gap-1"
           >
-            <Info size={14} />
+            View Details <ChevronRight size={14} />
           </button>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <span className="font-mono text-[10px] text-neutral-400">
-            SECURED: {record.connectedAt}
-          </span>
+          
           {record.status === "ACTIVE" ? (
             <button
               onClick={handleRevoke}
               disabled={isRevoking}
-              className="group/btn flex items-center gap-1.5 rounded-[8px] bg-neutral-900 px-3 py-1.5 text-xs font-bold text-white transition-all hover:bg-brand-primary disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-brand-primary dark:hover:text-white"
+              className="rounded-[var(--radius-md)] bg-[var(--color-risk-red-50)] border border-[var(--color-risk-red-100)] px-4 py-2 text-label-md font-semibold text-[var(--risk-high-text)] transition-all hover:bg-[var(--interactive-danger)] hover:text-white hover:border-transparent"
             >
-              {isRevoking ? "Updating..." : "Revoke Access"}
-              <ChevronRight size={14} className="transition-transform group-hover/btn:translate-x-0.5" />
+              {isRevoking ? "Revoking..." : "Revoke"}
             </button>
           ) : (
-            <div className="flex items-center gap-2 rounded-[8px] bg-neutral-50 px-3 py-1.5 text-xs font-bold text-neutral-400 dark:bg-neutral-800">
-              <ShieldCheck size={14} className="text-brand-primary" />
-              Sovereignty Restored
-            </div>
+             <div className="text-label-sm font-bold text-[var(--text-tertiary)]">
+                Revoked
+             </div>
           )}
-        </div>
       </div>
     </motion.div>
   );

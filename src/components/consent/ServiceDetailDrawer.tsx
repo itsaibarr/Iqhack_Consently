@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ShieldAlert, ShieldCheck, ExternalLink, Trash2 } from "lucide-react";
+import { X, ShieldAlert, Trash2 } from "lucide-react";
 import { PLAIN_LANGUAGE_MAP } from "@/lib/privacy";
 import { RISK_CONFIG_MAP } from "@/lib/constants";
 

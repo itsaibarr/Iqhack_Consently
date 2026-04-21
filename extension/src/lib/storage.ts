@@ -29,3 +29,20 @@ export async function updateEventAction(eventId: string, action: "granted" | "ca
   const events = state.events.map(e => e.id === eventId ? { ...e, userAction: action, synced: false } : e);
   await saveState({ ...state, events });
 }
+
+/** Patches a stored event with real risk/summary data once policy analysis arrives. */
+export async function patchEventRisk(
+  eventId: string,
+  overallRisk: "LOW" | "MEDIUM" | "HIGH",
+  plainSummary: string,
+  privacyPolicyUrl?: string,
+): Promise<void> {
+  const state = await getState();
+  const events = state.events.map(e =>
+    e.id === eventId
+      ? { ...e, overallRisk, plainSummary, privacyPolicyUrl, synced: false }
+      : e
+  );
+  await saveState({ ...state, events });
+}
+

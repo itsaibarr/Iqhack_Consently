@@ -22,6 +22,8 @@ export interface ConsentEvent {
   userAction: "granted" | "cancelled" | "detected"; // "detected" if we can't confirm outcome
   userId?: string;        // Tied to dashboard user
   synced: boolean;        // false until API confirms receipt
+  privacyPolicyUrl?: string;  // Resolved policy URL, set when analysis succeeds
+  plainSummary?: string;      // Plain-language summary from AI analysis
 }
 
 export interface ExtensionState {

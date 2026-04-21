@@ -1,4 +1,4 @@
-import { Shield, ArrowRight, CheckCircle2, RefreshCw } from "lucide-react";
+import { Shield, ArrowRight, CheckCircle2 } from "lucide-react";
 import { saveState } from "../lib/storage";
 
 interface WelcomeViewProps {
@@ -21,7 +21,7 @@ export default function WelcomeView({ onSyncComplete }: WelcomeViewProps) {
         isDemoMode: true,
         events: [],
         lastSyncAt: new Date().toISOString()
-      } as any);
+      } as Parameters<typeof saveState>[0]);
       onSyncComplete();
     }, 2000);
   };

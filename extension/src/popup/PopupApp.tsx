@@ -68,7 +68,15 @@ export default function PopupApp() {
   }, []);
 
   useEffect(() => {
-    refreshState();
+    // Initial load
+    const dataPromise = getState();
+    dataPromise.then(data => {
+      if (data.isDemoMode || (data.userId && data.handshakeComplete)) {
+        refreshState();
+      } else {
+        setLoading(false);
+      }
+    });
 
     // Listen for sync completion from background script
     const listener = (message: { type: string }) => {

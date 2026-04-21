@@ -2,8 +2,6 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase-server";
 
-import { DBCompanyRecord } from "@/types/consent";
-
 // This is a real server action for the MVP
 export async function revokeConsent(id: string) {
   console.log(`Revoking consent for ID: ${id}`);

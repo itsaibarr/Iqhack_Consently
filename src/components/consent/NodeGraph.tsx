@@ -35,7 +35,7 @@ export function NodeGraph({
   className?: string
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const fgRef = useRef<any>(null);
+  const fgRef = useRef<any>(undefined);
   const [dimensions, setDimensions] = useState({ width: 800, height: 400 });
   const [mounted, setMounted] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -81,8 +81,8 @@ export function NodeGraph({
       fg.d3Force('link')?.distance(120);
       
       // These might not be in the type but exist in the runtime
-      if (typeof fg.d3VelocityDecay === 'function') fg.d3VelocityDecay(0.3);
-      if (typeof fg.d3AlphaDecay === 'function') fg.d3AlphaDecay(0.04);
+      if (typeof (fg as any).d3VelocityDecay === 'function') (fg as any).d3VelocityDecay(0.3);
+      if (typeof (fg as any).d3AlphaDecay === 'function') (fg as any).d3AlphaDecay(0.04);
       
       // Initial fit after a small delay to let forces settle
       setTimeout(() => {
@@ -217,8 +217,8 @@ export function NodeGraph({
         height={dimensions.height}
         backgroundColor="#ffffff00"
         nodeLabel="name"
-        onNodeClick={(node: any) => handleNodeClick(node as GraphNode)}
-        onNodeHover={(node: any) => {
+        onNodeClick={(node) => handleNodeClick(node as GraphNode)}
+        onNodeHover={(node) => {
           updateHighlight(node as GraphNode | null);
           if (containerRef.current) {
             containerRef.current.style.cursor = node ? 'pointer' : (isDragging ? 'grabbing' : 'grab');

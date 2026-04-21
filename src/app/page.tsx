@@ -1,50 +1,18 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Container } from "@/components/layout/Container";
 import { CompanyCard } from "@/components/consent/CompanyCard";
 import { NodeGraph } from "@/components/consent/NodeGraph";
 import { ServiceDetailDrawer } from "@/components/consent/ServiceDetailDrawer";
-import { calculateGlobalPrivacyScore } from "@/lib/privacy";
-import { ShieldCheck, Zap, AlertTriangle, Fingerprint, Plus } from "lucide-react";
+import { RISK_CONFIG_MAP, EXTENSION_ID } from "@/lib/constants";
+import { Zap, AlertTriangle, Plus, Copy, ExternalLink } from "lucide-react";
 import { SummaryCard } from "@/components/ui/SummaryCard";
 import { LegendItem } from "@/components/ui/LegendItem";
 
-/**
- * Animated number component for the "Wow" factor.
- */
-function CountUp({ value, duration = 1.5 }: { value: number; duration?: number }) {
-  const [displayValue, setDisplayValue] = useState(0);
-  const countRef = useRef(0);
-
-  useEffect(() => {
-    let startTime: number;
-    const startValue = countRef.current;
-    const endValue = value;
-
-    const step = (timestamp: number) => {
-      if (!startTime) startTime = timestamp;
-      const progress = Math.min((timestamp - startTime) / (duration * 1000), 1);
-      const current = Math.floor(progress * (endValue - startValue) + startValue);
-      
-      setDisplayValue(current);
-      countRef.current = current;
-
-      if (progress < 1) {
-        window.requestAnimationFrame(step);
-      }
-    };
-
-    window.requestAnimationFrame(step);
-  }, [value, duration]);
-
-  return <span>{displayValue}</span>;
-}
-
 import { useConsent } from "@/context/ConsentContext";
 import { useRouter } from "next/navigation";
-import { Copy, ExternalLink } from "lucide-react";
 
 export default function Home() {
   const { companies, revokeConsent, user } = useConsent();
@@ -66,8 +34,6 @@ export default function Home() {
   const dataPointsCount = companies
     .filter((c) => c.status === "ACTIVE")
     .reduce((acc, c) => acc + (c.dataTypes?.length || 0), 0);
-
-  const privacyScore = useMemo(() => calculateGlobalPrivacyScore(companies), [companies]);
 
   const selectedService = companies.find(c => c.id === selectedId) || null;
 
@@ -164,7 +130,7 @@ export default function Home() {
               </p>
               
               <div className="mt-10 space-y-6">
-                <LegendItem color="var(--color-risk-red-500)" label="Critical exposure risk" />
+                <LegendItem color={RISK_CONFIG_MAP.HIGH.color} label="Critical exposure risk" />
                 <LegendItem color="var(--color-primary-500)" label="Your Sovereignty Hub" />
                 <LegendItem color="var(--color-neutral-200)" label="Neutral data collector" animate />
               </div>
@@ -227,8 +193,6 @@ export default function Home() {
 }
 
 function EmptyInventoryState() {
-  const EXTENSION_ID = "kegngnalimkofmfaeefinlljgdhomgon";
-
   const copyToClipboard = () => {
     navigator.clipboard.writeText(EXTENSION_ID);
   };
@@ -282,12 +246,9 @@ function EmptyInventoryState() {
 
       <div className="mt-16 flex items-center gap-4 rounded-[var(--radius-lg)] bg-white/50 px-5 py-3 border border-neutral-100">
         <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-
       </div>
     </motion.div>
   );
 }
 
-function cn(...inputs: (string | boolean | undefined | null)[]) {
-  return inputs.filter(Boolean).join(" ");
-}
+

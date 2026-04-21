@@ -59,7 +59,7 @@ export function ConsentProvider({ children }: { children: ReactNode }) {
       
       if (isDemo) {
         const demoUser = {
-          id: "demo-user-id",
+          id: "11111111-1111-1111-1111-111111111111",
           email: "demo@consently.ai",
           user_metadata: { full_name: "Demo User" }
         };

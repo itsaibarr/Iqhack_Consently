@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Container } from "@/components/layout/Container";
-import { useConsent } from "@/context/ConsentContext";
 import { Bell, Zap, Monitor, Lock, Trash2, ChevronRight } from "lucide-react";
 
 export default function SettingsPage() {

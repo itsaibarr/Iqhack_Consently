@@ -3,7 +3,6 @@
 import { useState, useMemo } from "react";
 import { Container } from "@/components/layout/Container";
 import { ShieldCheck, ShieldAlert, Shield, Filter, Calendar, ChevronRight } from "lucide-react";
-import { PLAIN_LANGUAGE_MAP } from "@/lib/privacy";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -45,7 +44,7 @@ export default function ActivityPage() {
     return history.filter(item => {
       return filter === "ALL" || item.action === filter;
     });
-  }, [filter]);
+  }, [filter, history]);
 
   return (
     <main className="min-h-screen bg-[#FDFDFD] pb-32">

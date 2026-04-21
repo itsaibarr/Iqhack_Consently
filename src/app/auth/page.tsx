@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { LucideShieldCheck, LucideLoader2, Eye, EyeOff } from "lucide-react";
+import { EXTENSION_ID, DEMO_USER_ID } from "@/lib/constants";
 
 // Declare chrome global for extension handshake
 declare const chrome: {
@@ -16,14 +17,6 @@ declare const chrome: {
     lastError?: { message?: string };
   };
 };
-
-/**
- * EXTENSION SYNC PROTOCOL
- * -----------------------
- * To sync auth with the browser extension, the web app must know the extension ID.
- * Replace 'YOUR_EXTENSION_ID' with the ID found in chrome://extensions.
- */
-const EXTENSION_ID = "kegngnalimkofmfaeefinlljgdhomgon";
 
 export default function AuthPage() {
   const router = useRouter();
@@ -84,7 +77,7 @@ export default function AuthPage() {
       
       document.cookie = "consently_demo_mode=true; path=/; max-age=86400; SameSite=Lax";
       
-      const success = await syncWithExtension("demo-user-id", "demo@consently.ai");
+      const success = await syncWithExtension(DEMO_USER_ID, "demo@consently.ai");
       
       // Brief delay to allow the user to see the success state before redirect
       setTimeout(() => {

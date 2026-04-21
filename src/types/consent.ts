@@ -29,6 +29,8 @@ export interface ConsentEvent {
   userAction: "granted" | "cancelled" | "detected";
   userId?: string;
   synced: boolean;
+  privacyPolicyUrl?: string; // Appended if analyzed
+  plainSummary?: string;     // AI generated plain language summary
 }
 
 export interface DBCompanyRecord {

@@ -21,13 +21,13 @@ export default function AuditPage() {
             <div className="space-y-4">
               <div className="inline-flex items-center gap-2 rounded-full bg-neutral-100 px-3 py-1 text-label-sm text-neutral-500">
                 <Zap size={12} className="text-amber-500" />
-                Security Audit
+                Privacy Health Check
               </div>
               <h1 className="text-display-lg text-neutral-900">
-                Vulnerability Report
+                Privacy Health Check
               </h1>
               <p className="text-body-md text-neutral-500 max-w-lg">
-                Deep analysis of service-level risks and historical sovereignty events.
+                Deep analysis of service risks and your personal data history.
               </p>
             </div>
 
@@ -45,25 +45,25 @@ export default function AuditPage() {
           {/* Core Metrics */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <SummaryCard 
-                label="Risk Surface" 
+                label="Potential Risks" 
                 value={activeHighRisk.length} 
-                detail="High-risk active nodes"
+                detail="High-risk services"
                 isRisk={activeHighRisk.length > 0}
             />
             <SummaryCard 
-                label="Audit Events" 
+                label="Recent Activity" 
                 value={history.length} 
                 detail="Past 30 days"
             />
             <SummaryCard 
-                label="Safe Nodes" 
+                label="Trusted Services" 
                 value={companies.filter(c => c.risk === "LOW" && c.status === "ACTIVE").length} 
-                detail="Verified trust-first"
+                detail="Verified safe"
             />
             <SummaryCard 
-                label="Compliance Status" 
+                label="Privacy Health" 
                 value="94%" 
-                detail="System health"
+                detail="Overall safety"
             />
           </div>
 
@@ -71,7 +71,7 @@ export default function AuditPage() {
             {/* Risk Assessment Analysis */}
             <div className="lg:col-span-8 space-y-8">
                 <div className="flex items-center gap-6">
-                    <h2 className="text-label-sm text-neutral-400 uppercase tracking-widest shrink-0">Priority Vulnerabilities</h2>
+                    <h2 className="text-label-sm text-neutral-400 uppercase tracking-widest shrink-0">Priority Risks</h2>
                     <div className="h-[1px] flex-1 bg-neutral-100" />
                 </div>
 
@@ -132,7 +132,7 @@ export default function AuditPage() {
                                             <span className="text-[10px] text-neutral-400 font-medium">{event.timestamp}</span>
                                         </div>
                                         <p className="text-body-sm text-neutral-500 mt-0.5 line-clamp-1">
-                                            {event.action === "REVOKED" ? "Protocol terminated" : "New consent handshake active"} — {event.reason || "Automatic detection"}
+                                            {event.action === "REVOKED" ? "Access ended" : "Connected"} — {event.reason || "Automatic detection"}
                                         </p>
                                     </div>
                                     <ArrowRight size={14} className="text-neutral-300" />
@@ -156,11 +156,11 @@ export default function AuditPage() {
                     
                     <div className="space-y-8 relative z-10">
                         <RecommendationItem 
-                            title="Audit Academic Data" 
+                            title="Review School Data" 
                             desc="3 services have access to your GPA records. Re-evaluate if necessary."
                         />
                         <RecommendationItem 
-                            title="Weekly Stealth Sweep" 
+                            title="Weekly Privacy Scan" 
                             desc="Run a deep scan of your browser extension for hidden data flows."
                         />
                         <RecommendationItem 
@@ -181,7 +181,7 @@ export default function AuditPage() {
                     <h4 className="text-label-sm text-neutral-400 uppercase tracking-widest mb-4">Encryption Level</h4>
                     <div className="flex items-center gap-3">
                         <ShieldCheck size={20} className="text-emerald-500" />
-                        <span className="text-label-md font-bold text-neutral-900">AES-256 Quantum Resistant</span>
+                        <span className="text-label-md font-bold text-neutral-900">Personal Encryption</span>
                     </div>
                     <p className="text-[11px] text-neutral-400 mt-4 leading-relaxed">
                         All audit logs are stored locally using end-to-end encryption. Consently servers never see your raw audit events.

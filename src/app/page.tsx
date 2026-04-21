@@ -7,9 +7,11 @@ import { CompanyCard } from "@/components/consent/CompanyCard";
 import { NodeGraph } from "@/components/consent/NodeGraph";
 import { ServiceDetailDrawer } from "@/components/consent/ServiceDetailDrawer";
 import { RISK_CONFIG_MAP, EXTENSION_ID } from "@/lib/constants";
-import { Zap, AlertTriangle, Plus, Copy, ExternalLink } from "lucide-react";
+import { Zap, AlertTriangle, Plus, Copy, ExternalLink, Radar, LayoutGrid, ChevronRight } from "lucide-react";
+import Link from "next/link";
 import { SummaryCard } from "@/components/ui/SummaryCard";
 import { LegendItem } from "@/components/ui/LegendItem";
+import { OnboardingFlow } from "@/components/ui/OnboardingFlow"; // [NEW]
 
 import { useConsent } from "@/context/ConsentContext";
 import { useRouter } from "next/navigation";
@@ -18,16 +20,22 @@ export default function Home() {
   const { companies, revokeConsent, user } = useConsent();
   const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
 
-  // Auth Guard: If not logged in, redirect after a short delay to allow session resolution
+  // Check if onboarding is needed
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!user) {
-        router.push("/auth");
-      }
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, [user, router]);
+    const isDone = localStorage.getItem("consently_onboarding_done");
+    if (!isDone) {
+      setShowOnboarding(true);
+    } else {
+      setShowOnboarding(false);
+    }
+  }, []);
+
+  const handleOnboardingComplete = () => {
+    localStorage.setItem("consently_onboarding_done", "true");
+    setShowOnboarding(false);
+  };
 
   const activeCount = companies.filter((c) => c.status === "ACTIVE").length;
   const highRiskCount = companies.filter((c) => c.risk === "HIGH" && c.status === "ACTIVE").length;
@@ -43,7 +51,11 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-[#FDFDFD] pb-32">
+    <>
+      <AnimatePresence>
+        {showOnboarding && <OnboardingFlow onComplete={handleOnboardingComplete} />}
+      </AnimatePresence>
+      <main className={`min-h-screen bg-[#FDFDFD] pb-32 transition-all duration-700 ${showOnboarding ? "blur-md pointer-events-none scale-105" : ""}`}>
       {/* Page Header */}
       <div className="border-b border-neutral-100 bg-white pt-20 pb-10">
         <Container>
@@ -57,7 +69,7 @@ export default function Home() {
                 Welcome back, {user?.email?.split("@")[0] || "Citizen"}
               </h1>
               <p className="text-body-md text-neutral-600 max-w-md">
-                Your data sovereignty is active. You have full control over how services interact with your digital identity.
+                Your privacy health is active. You have full control over how services interact with your information.
               </p>
             </motion.div>
             
@@ -105,7 +117,7 @@ export default function Home() {
           <div className="lg:col-span-8 space-y-8">
             <div className="flex items-center gap-6">
               <h2 className="text-label-sm text-neutral-400">
-                Neural Data Web
+                Your Data Map
               </h2>
               <div className="h-[1px] flex-1 bg-neutral-100" />
             </div>
@@ -124,15 +136,15 @@ export default function Home() {
               transition={{ delay: 0.4 }}
               className="rounded-[var(--radius-xl)] border border-neutral-100 bg-white p-8 shadow-sm"
             >
-              <h3 className="text-h3 text-neutral-900 tracking-tight">Interactive Topology</h3>
+              <h3 className="text-h3 text-neutral-900 tracking-tight">Service Map Legend</h3>
               <p className="mt-4 text-body-sm leading-relaxed text-neutral-500 font-medium">
-                The map displays real-time data ingestion pipelines. Each node represents a separate legal entity accessing your footprint.
+                The map shows every service that currently holds your data. Each node represents a different company tracking your information.
               </p>
               
               <div className="mt-10 space-y-6">
-                <LegendItem color={RISK_CONFIG_MAP.HIGH.color} label="Critical exposure risk" />
-                <LegendItem color="var(--color-primary-500)" label="Your Sovereignty Hub" />
-                <LegendItem color="var(--color-neutral-200)" label="Neutral data collector" animate />
+                <LegendItem color={RISK_CONFIG_MAP.HIGH.color} label="High risk of exposure" />
+                <LegendItem color="var(--color-primary-500)" label="You" />
+                <LegendItem color="var(--color-neutral-200)" label="Low risk service" animate />
               </div>
               
               <div className="mt-10 pt-8 border-t border-neutral-100">
@@ -145,42 +157,33 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Inventory Section */}
+        {/* Inventory Section CTA */}
         <div className="mt-24">
           <div className="mb-12 flex items-center gap-6">
             <h2 className="text-label-sm text-neutral-400">
-              Granular Service Inventory
+              Service Inventory
             </h2>
             <div className="h-[1px] flex-1 bg-neutral-100" />
           </div>
 
-          <motion.div layout className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {activeCount === 0 ? (
-              <div className="col-span-full">
-                <EmptyInventoryState />
-              </div>
-            ) : (
-              <AnimatePresence mode="popLayout">
-                {companies.map((company) => (
-                  <motion.div
-                    layout
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8, filter: "blur(10px)", transition: { duration: 0.3 } }}
-                    key={company.id}
-                  >
-                    <CompanyCard 
-                      record={company} 
-                      onRevoke={handleRevoke}
-                      onViewDetails={(id) => setSelectedId(id)}
-                    />
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            )}
-          </motion.div>
+          <div className="flex flex-col items-center justify-center py-20 rounded-[var(--radius-xl)] border border-neutral-100 bg-white shadow-sm">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--color-primary-50)] text-[var(--color-primary-500)] mb-6">
+               <LayoutGrid size={28} />
+            </div>
+            <h3 className="text-h3 text-neutral-900 mb-2">Manage All Consents</h3>
+            <p className="text-body-md text-neutral-500 text-center max-w-sm mb-8">
+              Access your full inventory of {activeCount} active services. Filter by risk, category, or search for specific data providers.
+            </p>
+            <Link 
+              href="/inventory"
+              className="btn-ghost border border-neutral-200 h-12 px-8 flex items-center gap-2 hover:bg-neutral-50"
+            >
+              Enter Inventory <ChevronRight size={16} />
+            </Link>
+          </div>
         </div>
       </Container>
+      </main>
 
       <ServiceDetailDrawer
         isOpen={!!selectedId}
@@ -188,67 +191,9 @@ export default function Home() {
         service={selectedService as NonNullable<typeof selectedService>}
         onRevoke={handleRevoke}
       />
-    </main>
+    </>
   );
 }
 
-function EmptyInventoryState() {
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(EXTENSION_ID);
-  };
-
-  return (
-    <motion.div 
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="flex flex-col items-center justify-center py-32 rounded-[var(--radius-xl)] border border-dashed border-neutral-100 bg-neutral-50/20 transition-all hover:bg-neutral-50/40"
-    >
-      <div className="relative mb-12">
-        <motion.div 
-          animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -inset-8 rounded-full bg-[var(--color-primary-50)] blur-3xl" 
-        />
-        <div className="relative flex h-24 w-24 items-center justify-center rounded-[var(--radius-xl)] bg-white shadow-md">
-          <Zap size={40} className="text-[var(--color-primary-500)]" />
-        </div>
-      </div>
-      
-      <h3 className="text-h3 text-neutral-900 tracking-tight">Active Handshake Required</h3>
-      <p className="mt-4 max-w-md text-center text-body-md text-neutral-500">
-        Consently is listening for your browser extension. Once you install and sync your first service, your sovereignty map will activate.
-      </p>
-
-      <div className="mt-10 flex flex-col gap-4 w-full max-w-sm">
-        <div className="flex items-center justify-between rounded-[var(--radius-lg)] border border-neutral-100 bg-white p-5 shadow-sm">
-          <div className="flex flex-col gap-1">
-            <span className="text-label-sm text-neutral-400">Extension ID</span>
-            <code className="text-mono-sm font-bold text-neutral-600">{EXTENSION_ID}</code>
-          </div>
-          <button 
-            onClick={copyToClipboard}
-            className="rounded-[var(--radius-md)] p-2 hover:bg-neutral-50 transition-colors text-neutral-400"
-          >
-            <Copy size={16} />
-          </button>
-        </div>
-
-        <a 
-          href={`https://chrome.google.com/webstore/detail/${EXTENSION_ID}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn-primary flex items-center justify-center gap-3 py-4"
-        >
-          <ExternalLink size={18} />
-          Install from Web Store
-        </a>
-      </div>
-
-      <div className="mt-16 flex items-center gap-4 rounded-[var(--radius-lg)] bg-white/50 px-5 py-3 border border-neutral-100">
-        <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-      </div>
-    </motion.div>
-  );
-}
 
 

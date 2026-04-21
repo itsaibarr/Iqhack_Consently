@@ -55,13 +55,13 @@ export default function ActivityPage() {
             <div className="space-y-4">
               <div className="inline-flex items-center gap-2 rounded-full bg-neutral-100 px-3 py-1 text-label-sm text-neutral-500">
                 <Calendar size={12} />
-                Audit Trail
+                Your History
               </div>
               <h1 className="text-display-lg text-neutral-900">
                 Permission History
               </h1>
               <p className="text-body-md text-neutral-500 max-w-lg">
-                A chronological, jargon-free log of your digital footprint. Monitor exactly when and why your data access changed.
+                Your complete history of your data. See exactly when and why services accessed your information.
               </p>
             </div>
 
@@ -184,7 +184,7 @@ export default function ActivityPage() {
             <div className="sticky top-24 rounded-[var(--radius-lg)] border border-neutral-100 bg-white p-8 shadow-sm">
               <h4 className="text-h3 text-neutral-900">Account Security</h4>
               <p className="mt-2 text-body-sm text-neutral-500">
-                This log is permanent and cannot be modified by third parties. It serves as your official record of data sovereignty.
+                This log is permanent and cannot be modified by third parties. It serves as your official record of your data privacy.
               </p>
               
               <div className="mt-8 space-y-4">
@@ -199,7 +199,7 @@ export default function ActivityPage() {
               </div>
               
               <button className="btn-primary mt-8 w-full">
-                Export Audit Log (PDF)
+                Download History (PDF)
               </button>
             </div>
           </div>

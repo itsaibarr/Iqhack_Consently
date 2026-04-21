@@ -35,13 +35,13 @@ export default function MapPage() {
             >
               <div className="inline-flex items-center gap-2 rounded-full bg-neutral-100 px-3 py-1 text-label-sm text-neutral-500">
                 <Globe size={12} className="text-[var(--color-primary-500)]" />
-                Topology Map
+                Live Connection Map
               </div>
               <h1 className="text-display-lg text-neutral-900 leading-tight">
-                Live Sovereignty Map
+                Your Privacy Map
               </h1>
               <p className="text-body-md text-neutral-500 max-w-xl">
-                An immersive visualization of your data pipelines. Each node represents a legal entity with active permissions to your digital footprint.
+                A live view of every company that currently holds your digital footprint. Tap any service to manage their access.
               </p>
             </motion.div>
 
@@ -80,12 +80,12 @@ export default function MapPage() {
                     >
                         <h4 className="text-label-sm text-neutral-400 mb-4 flex items-center gap-2">
                             <Info size={14} />
-                            Topology Legend
+                            Map Legend
                         </h4>
                         <div className="space-y-4">
-                            <LegendItem color="var(--color-risk-red-500)" label="Critical Risk Node" />
-                            <LegendItem color="var(--color-primary-500)" label="Identity Core" />
-                            <LegendItem color="var(--color-neutral-200)" label="Passive Service" animate />
+                            <LegendItem color="var(--color-risk-red-500)" label="High Risk Service" />
+                            <LegendItem color="var(--color-primary-500)" label="You (Identity Core)" />
+                            <LegendItem color="var(--color-neutral-200)" label="Passive Connection" animate />
                         </div>
                     </motion.div>
 
@@ -96,15 +96,15 @@ export default function MapPage() {
                         className="pointer-events-auto flex gap-4"
                     >
                         <SummaryCard 
-                            label="Active Nodes" 
+                            label="Connected Companies" 
                             value={activeCompanies.length} 
-                            detail="Legal entities"
+                            detail="Total entities"
                             className="w-40 border-none shadow-xl"
                         />
                         <SummaryCard 
-                            label="Inbound Flows" 
+                            label="Data Requests" 
                             value={<Activity size={24} className="text-[var(--color-primary-500)]" />} 
-                            detail="1.2 req/s"
+                            detail="Real-time access"
                             className="w-40 border-none shadow-xl"
                         />
                     </motion.div>
@@ -115,15 +115,15 @@ export default function MapPage() {
           {/* Information Section */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mt-12 py-12 border-t border-neutral-100">
              <div className="space-y-4">
-                <h3 className="text-h4 text-neutral-900">Understanding the Topology</h3>
+                <h3 className="text-h4 text-neutral-900">Understanding your data connections</h3>
                 <p className="text-body-sm text-neutral-600 leading-relaxed">
-                    The spatial arrangement of nodes is determined by their &quot;Privacy Weight.&quot; Services closer to your Identity Core have more granular access to sensitive data points like location, financial history, or academic records.
+                    Companies closer to your center have more access to sensitive details like your location, finances, or academic records. High-risk services are automatically highlighted for your review.
                 </p>
              </div>
              <div className="space-y-4">
-                <h3 className="text-h4 text-neutral-900">Real-time Revocation</h3>
+                <h3 className="text-h4 text-neutral-900">Revoke Access Instantly</h3>
                 <p className="text-body-sm text-neutral-600 leading-relaxed">
-                    Clicking any node will trigger a deep-packet analysis of the service. You can terminate the connection instantly, which will stop all future data synchronization and initiate the &quot;Right to be Forgotten&quot; protocol where supported.
+                    Tap any bubble to see exactly what a company knows about you. If you don&apos;t recognize a service or no longer use it, you can disconnect it in one click.
                 </p>
              </div>
           </div>

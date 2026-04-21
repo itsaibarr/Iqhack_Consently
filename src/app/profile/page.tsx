@@ -68,19 +68,19 @@ export default function ProfilePage() {
           {/* Sovereignty Metrics */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <SummaryCard 
-                label="Digital Footprint" 
+                label="Total Connections" 
                 value={totalConsents} 
-                detail="Historical connections" 
+                detail="Historical reach" 
             />
             <SummaryCard 
-                label="Active Sovereignty" 
+                label="Live Access" 
                 value={activeConsents} 
                 detail="Real-time access" 
             />
             <SummaryCard 
-                label="Terminated Links" 
+                label="Stopped Access" 
                 value={revokedConsents} 
-                detail="Successfully revoked" 
+                detail="Successfully blocked" 
             />
           </div>
 
@@ -95,7 +95,7 @@ export default function ProfilePage() {
                     <div className="relative z-10">
                         <div className="flex items-center gap-3 text-[var(--color-primary-500)] mb-6">
                             <Award size={24} />
-                            <h3 className="text-h3 text-neutral-900 tracking-tight">Sovereignty Score</h3>
+                            <h3 className="text-h3 text-neutral-900 tracking-tight">Safety Rating</h3>
                         </div>
                         
                         <div className="flex items-baseline gap-2 mb-8">
@@ -115,7 +115,7 @@ export default function ProfilePage() {
                         <p className="text-body-md text-neutral-600 leading-relaxed max-w-xl">
                             {trustScore > 80 
                                 ? "Excellent control. Your digital footprint is well-managed with minimal high-risk exposures. Continue monitoring for new third-party detections."
-                                : "Your sovereignty score is being impacted by active high-risk consents. We recommend auditing your high-risk services to improve your security posture."}
+                                : "Your privacy score is being impacted by active high-risk consents. We recommend auditing your high-risk services to improve your security posture."}
                         </p>
                     </div>
 
@@ -130,7 +130,7 @@ export default function ProfilePage() {
                 <div className="rounded-[var(--radius-xl)] border border-neutral-100 bg-white p-8 shadow-sm h-full flex flex-col">
                     <h4 className="text-label-sm text-neutral-400 uppercase tracking-widest mb-6">Security Tip</h4>
                     <p className="text-body-sm text-neutral-500 leading-relaxed mb-auto">
-                        Did you know that revoking a single high-risk service can improve your sovereignty score by up to 15 points?
+                        Did you know that revoking a single high-risk service can improve your privacy score by up to 15 points?
                     </p>
                     <button className="w-full mt-8 py-3 rounded-[var(--radius-md)] bg-neutral-900 text-white font-bold text-[12px] hover:bg-neutral-800 transition-all active:scale-95">
                         Audit High Risk Now

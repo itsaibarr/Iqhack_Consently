@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
-import { RiskLevel, ConsentStatus } from "@/lib/constants";
+import { RiskLevel, ConsentStatus, CompanyRecord } from "@/lib/constants";
+import { ConsentEvent } from "@/types/consent";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*", // For development. In production, specify the extension ID.
+  "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
@@ -14,7 +15,7 @@ export async function OPTIONS() {
 
 export async function POST(req: NextRequest) {
   try {
-    const event = await req.json();
+    const event = await req.json() as ConsentEvent;
 
     // 1. Basic Validation
     if (!event.id || !event.appDomain || !event.userId) {
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest) {
     const userId = event.userId;
 
     // 2. Transform the OAuth detection into a Dashboard-compatible record
-    const categoryMap: Record<string, any> = {
+    const categoryMap: Record<string, string> = {
       google: "CONSUMER",
       github: "CONSUMER",
       resend: "CONSUMER",
@@ -35,10 +36,10 @@ export async function POST(req: NextRequest) {
     const companyData = {
       user_id: userId,
       name: event.appName,
-      category: categoryMap[event.appDomain.split('.')[0].toLowerCase()] || "CONSUMER",
+      category: (categoryMap[event.appDomain.split('.')[0].toLowerCase()] || "CONSUMER") as CompanyRecord["category"],
       risk: event.overallRisk as RiskLevel,
       status: (event.userAction === "detected" ? "PENDING" : "ACTIVE") as ConsentStatus,
-      data_types: event.scopesTranslated.map((s: any) => ({
+      data_types: event.scopesTranslated.map((s) => ({
         name: s.label,
         category: s.category || "PII"
       })),
@@ -63,9 +64,9 @@ export async function POST(req: NextRequest) {
       .insert({
         user_id: userId,
         company_name: event.appName,
-        action: (event.userAction === "detected" ? "GRANTED" : "GRANTED"), // Map detection to granted for simple MVP logic
+        action: "GRANTED",
         timestamp: event.detectedAt || new Date().toISOString(),
-        data_types: event.scopesTranslated.map((s: any) => s.label)
+        data_types: event.scopesTranslated.map((s) => s.label)
       });
 
     if (histError) throw histError;
@@ -75,9 +76,10 @@ export async function POST(req: NextRequest) {
       message: "Sync complete",
       companyId: company.id
     }, { headers: corsHeaders });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Internal Server Error";
     console.error("SYNC ERROR:", error);
-    return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500, headers: corsHeaders });
+    return NextResponse.json({ error: message }, { status: 500, headers: corsHeaders });
   }
 }
 

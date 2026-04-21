@@ -2,6 +2,8 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase-server";
 
+import { DBCompanyRecord } from "@/types/consent";
+
 // This is a real server action for the MVP
 export async function revokeConsent(id: string) {
   console.log(`Revoking consent for ID: ${id}`);
@@ -20,6 +22,8 @@ export async function revokeConsent(id: string) {
     .eq('id', id)
     .single();
 
+  const typedCompany = company as { name: string; data_types: { name: string }[] } | null;
+
   // 2. Update company status
   const { error: updateError } = await supabase
     .from('companies')
@@ -30,12 +34,12 @@ export async function revokeConsent(id: string) {
   if (updateError) return { success: false, error: updateError.message };
 
   // 3. Log to history
-  if (company) {
+  if (typedCompany) {
     await supabase.from('history').insert({
       user_id: user.id,
-      company_name: company.name,
+      company_name: typedCompany.name,
       action: 'REVOKED',
-      data_types: company.data_types.map((dt: any) => dt.name)
+      data_types: typedCompany.data_types.map((dt: { name: string }) => dt.name)
     });
   }
   

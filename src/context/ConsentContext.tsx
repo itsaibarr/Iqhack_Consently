@@ -4,9 +4,10 @@ import React, { createContext, useContext, useState, ReactNode, useEffect } from
 import { CompanyRecord, ActivityRecord } from "@/lib/constants";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { DBCompanyRecord, DBHistoryRecord } from "@/types/consent";
 
 interface ConsentContextType {
-  user: { id: string; email?: string; user_metadata?: Record<string, unknown> } | null;
+  user: { id: string; email?: string; user_metadata?: Record<string, unknown>; created_at?: string } | null;
   companies: CompanyRecord[];
   history: ActivityRecord[];
   revokeConsent: (id: string) => void;
@@ -16,31 +17,34 @@ interface ConsentContextType {
 
 const ConsentContext = createContext<ConsentContextType | undefined>(undefined);
 
-// Helper mappers moved outside to avoid declaration-order issues and improve performance
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const mapCompany = (raw: any): CompanyRecord => ({
+const mapCompany = (raw: DBCompanyRecord): CompanyRecord => ({
   id: raw.id,
   name: raw.name,
-  category: raw.category as CompanyRecord["category"],
-  risk: raw.risk as CompanyRecord["risk"],
-  status: raw.status as CompanyRecord["status"],
-  dataTypes: (raw.data_types as CompanyRecord["dataTypes"]) || [],
-  sharedWith: (raw.shared_with as string[]) || [],
+  category: raw.category,
+  risk: raw.risk,
+  status: raw.status,
+  dataTypes: raw.data_types || [],
+  sharedWith: raw.shared_with || [],
   connectedAt: raw.connected_at,
-  description: raw.description,
-  logoUid: raw.logo_uid,
+  description: raw.description || "",
+  logoUid: raw.logo_uid || "",
   lastAccessed: raw.last_accessed || "Never",
   purpose: raw.purpose || "Service functionality"
 });
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const mapHistory = (raw: any): ActivityRecord => ({
+const mapHistory = (raw: DBHistoryRecord): ActivityRecord => ({
   id: raw.id,
   companyName: raw.company_name,
-  action: raw.action as ActivityRecord["action"],
+  action: raw.action,
   timestamp: raw.timestamp,
-  dataTypes: (raw.data_types as string[]) || []
+  dataTypes: raw.data_types || [],
+  reason: raw.reason || ""
 });
+
+const getIsDemoMode = () => {
+  if (typeof document === "undefined") return false;
+  return document.cookie.split("; ").some(row => row.startsWith("consently_demo_mode=true"));
+};
 
 export function ConsentProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -51,10 +55,7 @@ export function ConsentProvider({ children }: { children: ReactNode }) {
   // Initial Fetch & Auth State
   useEffect(() => {
     const initAuth = async () => {
-      // Check for demo bypass first (cookie is more reliable for middleware)
-      const cookies = typeof document !== "undefined" ? document.cookie.split("; ") : [];
-      const demoCookie = cookies.find(row => row.startsWith("consently_demo_mode="));
-      const isDemo = demoCookie?.split("=")[1] === "true";
+      const isDemo = getIsDemoMode();
       
       if (isDemo) {
         const demoUser = {
@@ -75,18 +76,16 @@ export function ConsentProvider({ children }: { children: ReactNode }) {
     };
 
     const fetchUserData = async (userId: string) => {
-      // Fetch Companies
-      const query = supabase.from("companies").select("*");
-      
-      const { data: companiesData, error: companiesError } = await query
+      const { data: companiesData, error: companiesError } = await supabase
+        .from("companies")
+        .select("*")
         .eq("user_id", userId)
         .order("connected_at", { ascending: false });
 
       if (!companiesError && companiesData) {
-        setCompanies(companiesData.map(mapCompany));
+        setCompanies((companiesData as unknown as DBCompanyRecord[]).map(mapCompany));
       }
 
-      // Fetch History
       const { data: historyData, error: historyError } = await supabase
         .from("history")
         .select("*")
@@ -94,23 +93,18 @@ export function ConsentProvider({ children }: { children: ReactNode }) {
         .order("timestamp", { ascending: false });
 
       if (!historyError && historyData) {
-        setHistory(historyData.map(mapHistory));
+        setHistory((historyData as unknown as DBHistoryRecord[]).map(mapHistory));
       }
     };
 
     initAuth();
 
-    // Listen for Auth Changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUser(session.user);
         fetchUserData(session.user.id);
       } else {
-        // Only redirect if NOT in demo mode
-        const cookies = typeof document !== "undefined" ? document.cookie.split("; ") : [];
-        const isDemo = cookies.some(row => row.startsWith("consently_demo_mode=true"));
-
-        if (!isDemo) {
+        if (!getIsDemoMode()) {
           setUser(null);
           setCompanies([]);
           setHistory([]);
@@ -122,7 +116,6 @@ export function ConsentProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, [router]);
 
-  // Real-time synchronization logic
   useEffect(() => {
     if (!user) return;
 
@@ -133,9 +126,9 @@ export function ConsentProvider({ children }: { children: ReactNode }) {
         { event: "*", schema: "public", table: "companies", filter: `user_id=eq.${user.id}` },
         (payload) => {
           if (payload.eventType === "INSERT") {
-            setCompanies((prev) => [mapCompany(payload.new), ...prev]);
+            setCompanies((prev) => [mapCompany(payload.new as DBCompanyRecord), ...prev]);
           } else if (payload.eventType === "UPDATE") {
-            setCompanies((prev) => prev.map(c => c.id === payload.new.id ? mapCompany(payload.new) : c));
+            setCompanies((prev) => prev.map(c => c.id === payload.new.id ? mapCompany(payload.new as DBCompanyRecord) : c));
           } else if (payload.eventType === "DELETE") {
             setCompanies((prev) => prev.filter(c => c.id !== payload.old.id));
           }
@@ -145,7 +138,7 @@ export function ConsentProvider({ children }: { children: ReactNode }) {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "history", filter: `user_id=eq.${user.id}` },
         (payload) => {
-          setHistory((prev) => [mapHistory(payload.new), ...prev]);
+          setHistory((prev) => [mapHistory(payload.new as DBHistoryRecord), ...prev]);
         }
       )
       .subscribe();
@@ -155,9 +148,8 @@ export function ConsentProvider({ children }: { children: ReactNode }) {
     };
   }, [user]);
 
-  // Sync extension events on focus (Fallback for polling)
   const syncExtensionEvents = async () => {
-    // This will be handled by the sync API now
+    // Handled by sync API
   };
 
   const revokeConsent = async (id: string) => {
@@ -165,7 +157,6 @@ export function ConsentProvider({ children }: { children: ReactNode }) {
     if (!company || !user) return;
 
     try {
-      // Call Server Action or direct update
       const { error: updateError } = await supabase
         .from("companies")
         .update({ status: "REVOKED" })
@@ -174,8 +165,7 @@ export function ConsentProvider({ children }: { children: ReactNode }) {
 
       if (updateError) throw updateError;
 
-      // Log the revocation in history
-      const { error: historyError } = await supabase
+      await supabase
         .from("history")
         .insert({
           user_id: user.id,
@@ -183,8 +173,6 @@ export function ConsentProvider({ children }: { children: ReactNode }) {
           action: "REVOKED",
           data_types: company.dataTypes.map((dt) => dt.name)
         });
-
-      if (historyError) throw historyError;
 
     } catch (e) {
       console.error("Revocation failed", e);

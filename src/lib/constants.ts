@@ -28,4 +28,5 @@ export interface ActivityRecord {
   action: "GRANTED" | "REVOKED" | "UPDATED";
   timestamp: string;
   dataTypes: string[];
+  reason?: string;
 }

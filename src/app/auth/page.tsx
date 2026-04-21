@@ -1,12 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { LucideShieldCheck, LucideLoader2, LucideLayoutDashboard, Eye, EyeOff } from "lucide-react";
+import { LucideShieldCheck, LucideLoader2, Eye, EyeOff } from "lucide-react";
 
 // Declare chrome global for extension handshake
-declare const chrome: any;
+declare const chrome: {
+  runtime: {
+    sendMessage: (
+      extensionId: string,
+      message: { type: string; userId: string; userEmail: string },
+      callback: (response: { success?: boolean } | undefined) => void
+    ) => void;
+    lastError?: { message?: string };
+  };
+};
 
 /**
  * EXTENSION SYNC PROTOCOL
@@ -27,33 +36,41 @@ export default function AuthPage() {
   const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "complete" | "failed">("idle");
 
   // Sync session with extension upon successful auth
-  const syncWithExtension = async (userId: string, userEmail: string) => {
-    setSyncStatus("syncing");
-    
-    // Check if chrome.runtime is available (it should be if landed here from extension)
-    if (typeof chrome !== "undefined" && chrome.runtime?.sendMessage) {
-      try {
-        chrome.runtime.sendMessage(
-          EXTENSION_ID, 
-          { type: "AUTH_SUCCESS", userId, userEmail },
-          (response: { success?: boolean } | undefined) => {
-            if (chrome.runtime.lastError) {
-              console.warn("[Consently] Extension sync failed (ID might be wrong):", chrome.runtime.lastError);
-              setSyncStatus("failed");
-            } else if (response?.success) {
-              console.log("[Consently] Auth synced with extension!");
-              setSyncStatus("complete");
+  const syncWithExtension = (userId: string, userEmail: string): Promise<boolean> => {
+    return new Promise((resolve) => {
+      setSyncStatus("syncing");
+      
+      if (typeof chrome !== "undefined" && chrome.runtime?.sendMessage) {
+        try {
+          chrome.runtime.sendMessage(
+            EXTENSION_ID, 
+            { type: "AUTH_SUCCESS", userId, userEmail },
+            (response: { success?: boolean } | undefined) => {
+              if (chrome.runtime.lastError) {
+                console.warn("[Consently] Extension sync failed (ID might be wrong):", chrome.runtime.lastError);
+                setSyncStatus("failed");
+                resolve(false);
+              } else if (response?.success) {
+                console.log("[Consently] Auth synced with extension!");
+                setSyncStatus("complete");
+                resolve(true);
+              } else {
+                setSyncStatus("failed");
+                resolve(false);
+              }
             }
-          }
-        );
-      } catch (err) {
-        console.error("[Consently] Unexpected error during extension sync:", err);
+          );
+        } catch (err) {
+          console.error("[Consently] Unexpected error during extension sync:", err);
+          setSyncStatus("failed");
+          resolve(false);
+        }
+      } else {
+        console.warn("[Consently] chrome.runtime not found. Extension sync skipped.");
         setSyncStatus("failed");
+        resolve(false);
       }
-    } else {
-      console.warn("[Consently] chrome.runtime not found. Extension sync skipped.");
-      setSyncStatus("failed");
-    }
+    });
   };
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -62,18 +79,17 @@ export default function AuthPage() {
     setError(null);
 
     // DEMO BYPASS: If credentials match the demo account, we set a flag and bypass real auth
-    // This ensures the demo works during the hackathon even if email rate limits are hit.
     if (!isSignUp && email === "demo@consently.ai" && password === "consently2024") {
       console.log("[Consently] Demo credentials detected. Engaging bypass mode.");
       
-      // Set cookie for middleware access (expires in 1 day)
       document.cookie = "consently_demo_mode=true; path=/; max-age=86400; SameSite=Lax";
       
-      await syncWithExtension("demo-user-id", "demo@consently.ai");
+      const success = await syncWithExtension("demo-user-id", "demo@consently.ai");
       
+      // Brief delay to allow the user to see the success state before redirect
       setTimeout(() => {
         window.location.href = "/";
-      }, 1000);
+      }, success ? 800 : 2000);
       return;
     }
 
@@ -90,22 +106,19 @@ export default function AuthPage() {
       if (authError) throw authError;
 
       if (data.user) {
-        // Clear bypass if we logged in with a real account
         document.cookie = "consently_demo_mode=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
         
-        // Sync with extension before redirecting
-        await syncWithExtension(data.user.id, data.user.email!);
+        const success = await syncWithExtension(data.user.id, data.user.email!);
         
-        // Brief delay for visual feedback of the handshake
+        // Ensure feedback is visible before navigation
         setTimeout(() => {
           router.push("/");
-        }, 1000);
+        }, success ? 800 : 2000);
       }
-    } catch (err: any) {
-      setError(err.message || "Authentication failed");
-    } finally {
-      // Keep loading true if redirecting
-      if (syncStatus === "idle") setLoading(false);
+    } catch (err) {
+      const error = err as { message?: string };
+      setError(error.message || "Authentication failed");
+      setLoading(false);
     }
   };
 

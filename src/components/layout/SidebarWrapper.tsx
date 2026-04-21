@@ -2,10 +2,17 @@
 
 import { usePathname } from "next/navigation";
 import { Sidebar } from "./Sidebar";
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 export function SidebarWrapper({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const isAuthPage = pathname?.startsWith("/auth");
 
   if (isAuthPage) {
@@ -14,8 +21,13 @@ export function SidebarWrapper({ children }: { children: ReactNode }) {
 
   return (
     <>
-      <Sidebar />
-      <main className="pl-72 min-h-screen">
+      <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
+      <main 
+        className={cn(
+            "min-h-screen transition-all duration-300",
+            isCollapsed ? "pl-20" : "pl-72"
+        )}
+      >
         {children}
       </main>
     </>

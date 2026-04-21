@@ -8,6 +8,8 @@ import { NodeGraph } from "@/components/consent/NodeGraph";
 import { ServiceDetailDrawer } from "@/components/consent/ServiceDetailDrawer";
 import { calculateGlobalPrivacyScore } from "@/lib/privacy";
 import { ShieldCheck, Zap, AlertTriangle, Fingerprint, Plus } from "lucide-react";
+import { SummaryCard } from "@/components/ui/SummaryCard";
+import { LegendItem } from "@/components/ui/LegendItem";
 
 /**
  * Animated number component for the "Wow" factor.
@@ -110,17 +112,17 @@ export default function Home() {
           </div>
 
           <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <TopSummaryCard 
+            <SummaryCard 
               label="Services Connected" 
               value={activeCount} 
               detail={`Since ${companies[0]?.connectedAt || "Sep 2022"}`}
             />
-            <TopSummaryCard 
+            <SummaryCard 
               label="Data Types Shared" 
               value={dataPointsCount} 
               detail="Across all active consents"
             />
-            <TopSummaryCard 
+            <SummaryCard 
               label="High Risk Services" 
               value={highRiskCount} 
               detail={highRiskCount > 0 ? "Review recommended" : "No urgent action needed"}
@@ -144,6 +146,7 @@ export default function Home() {
             <NodeGraph 
               companies={companies} 
               onNodeClick={(id) => setSelectedId(id)} 
+              className="h-[500px]"
             />
           </div>
 
@@ -279,50 +282,9 @@ function EmptyInventoryState() {
 
       <div className="mt-16 flex items-center gap-4 rounded-[var(--radius-lg)] bg-white/50 px-5 py-3 border border-neutral-100">
         <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-        <span className="text-label-sm text-neutral-400">Socket Protocol: Listening...</span>
+
       </div>
     </motion.div>
-  );
-}
-
-function LegendItem({ color, label, animate }: { color: string; label: string; animate?: boolean }) {
-  return (
-    <div className="flex items-center gap-4 group cursor-default">
-      <div 
-        className={cn("h-2.5 w-2.5 rounded-full ring-4 ring-offset-2 ring-transparent transition-all group-hover:ring-neutral-100", animate && "animate-pulse")} 
-        style={{ backgroundColor: color }} 
-      />
-      <span className="text-label-sm text-neutral-500">{label}</span>
-    </div>
-  );
-}
-
-function TopSummaryCard({ 
-  label, 
-  value, 
-  detail,
-  isRisk
-}: { 
-  label: string; 
-  value: React.ReactNode; 
-  detail: string;
-  isRisk?: boolean;
-}) {
-  return (
-    <div className="group relative flex flex-col items-center justify-center rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.06)]">
-      <span className="text-display-lg font-bold text-neutral-900 leading-none">
-        {value}
-      </span>
-      <span className="mt-2 text-body-sm font-medium text-neutral-600">
-        {label}
-      </span>
-      <span className={cn(
-        "mt-1 text-label-sm tracking-tight",
-        isRisk ? "text-[var(--color-risk-red-500)] font-bold" : "text-neutral-400"
-      )}>
-        {isRisk && "⚠ "}{detail}
-      </span>
-    </div>
   );
 }
 

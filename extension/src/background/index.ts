@@ -1,8 +1,49 @@
 import { detectProvider } from "./detector";
 import { parseOAuthUrl } from "./parser";
-import { appendEvent, getState, updateEventAction, saveState } from "../lib/storage";
+import { appendEvent, getState, updateEventAction, saveState, patchEventRisk } from "../lib/storage";
 import { flushUnsynced, syncEvent } from "./sync";
 import { ConsentEvent } from "../lib/types";
+import { analyzePolicyForDomain } from "./privacyAnalyzer";
+
+
+// ---------------------------------------------------------------------------
+// SIGN-IN PAGE DETECTION — Real policy analysis pipeline
+// No mock data. The overlay shows a loading state while the background
+// fetches and analyzes the site's actual privacy policy via Gemini.
+// ---------------------------------------------------------------------------
+
+/**
+ * Derives a readable app name from a hostname.
+ * "accounts.google.com" → "Google"
+ * "app.notion.so" → "Notion"
+ */
+function deriveAppName(domain: string): string {
+  const clean = domain.replace(/^www\./, "");
+  // Known brand names for common TLDs/subdomains
+  const firstPart = clean.split(".").slice(-2, -1)[0] ?? clean.split(".")[0];
+  return firstPart.charAt(0).toUpperCase() + firstPart.slice(1);
+}
+
+/**
+ * Builds a minimal shell ConsentEvent with no fabricated scopes.
+ * The risk and scopes are filled in later by real policy analysis.
+ */
+function buildShellEvent(domain: string): ConsentEvent {
+  return {
+    id: crypto.randomUUID(),
+    detectedAt: new Date().toISOString(),
+    provider: "unknown",
+    appDomain: domain,
+    appName: deriveAppName(domain),
+    clientId: "detected-via-signin-page",
+    scopesRaw: [],
+    scopesTranslated: [],
+    overallRisk: "LOW", // Placeholder — overwritten by patchEventRisk when analysis arrives
+    userAction: "detected",
+    synced: false,
+  };
+}
+
 
 // Allow content scripts to access session storage
 chrome.runtime.onInstalled.addListener(() => {
@@ -28,37 +69,104 @@ chrome.webNavigation.onCommitted.addListener(async (details) => {
 
   const event = parseOAuthUrl(details.url, provider);
   if (!event) {
-    console.log("[Consently] Failed to parse OAuth URL or no scope found");
+    console.log(`[Consently] Parser ignored URL: ${details.url}`);
     return;
   }
 
-  // 1. Save locally (Persistent)
+  // Final safety: don't show overlay on the provider's own site for its own apps
+  const PROVIDER_DOMAINS = ["google.com", "github.com", "facebook.com", "microsoft.com", "apple.com"];
+  const isSelfConsent = PROVIDER_DOMAINS.some(d => 
+    (event.appDomain === d || event.appDomain.endsWith("." + d)) &&
+    (new URL(details.url).hostname.endsWith(d))
+  );
+
+  if (isSelfConsent) {
+    console.log(`[Consently] Ignoring 1st-party self-consent on ${event.appDomain}`);
+    return;
+  }
+
+  // Store the parsed event locally so we can update it
   await appendEvent(event);
-  
-  // Also store as the most "recent" for quick handshake fallback
   await chrome.storage.local.set({ last_detected_event: event });
 
-  // 2. Proactively Sync to Dashboard as 'PENDING'
-  console.log(`[Consently] Proactively syncing detected event for ${event.appName}...`);
-  syncEvent(event).catch(err => console.error("[Consently] Proactive sync failed", err));
-
-  // 3. Store in session for the content script to pick up
+  // Store in session storage for handleHandshake fallback so the overlay can fetch it
   if (chrome.storage.session) {
     await chrome.storage.session.set({
       [`pending_event_${details.tabId}`]: event
     });
-    console.log(`[Consently] Stored pending event for tab ${details.tabId}`);
   }
 
-  // 4. Update badge
-  chrome.action.setBadgeText({ text: "!" });
-  chrome.action.setBadgeBackgroundColor({ color: "#3B6BF5" });
+  // Update badge to analyzing state
+  chrome.action.setBadgeText({ text: "…" });
+  chrome.action.setBadgeBackgroundColor({ color: "#F59E0B" });
+
+  // Run the background analysis pipeline
+  analyzePolicyForDomain(event.appDomain, event.appName)
+    .then(async (analysis) => {
+      if (!analysis) {
+        chrome.tabs.sendMessage(details.tabId, { type: "ANALYSIS_FAILED", domain: event.appDomain }).catch(() => {});
+        chrome.action.setBadgeText({ text: "?" });
+        chrome.action.setBadgeBackgroundColor({ color: "#8E8E93" });
+        return;
+      }
+
+      console.log(`[Consently] Analysis ready for ${event.appName}`);
+
+      // Push update to the active overlay
+      chrome.tabs.sendMessage(details.tabId, { type: "UPDATE_OVERLAY", analysis }).catch(() => {});
+
+      const badgeColor = analysis.riskVerdict === "HIGH" ? "#EF4444" : analysis.riskVerdict === "MEDIUM" ? "#F59E0B" : "#10B981";
+      chrome.action.setBadgeText({ text: "!" });
+      chrome.action.setBadgeBackgroundColor({ color: badgeColor });
+
+      if (chrome.storage.session) {
+        await chrome.storage.session.set({ [`pending_analysis_${details.tabId}`]: analysis });
+      }
+
+      // Patch the shell event with real analysis
+      await patchEventRisk(event.id, analysis.riskVerdict, analysis.plainSummary, analysis.privacyPolicyUrl);
+    })
+    .catch((err) => {
+      console.error("[Consently] Policy analysis pipeline failed:", err);
+      chrome.tabs.sendMessage(details.tabId, { type: "ANALYSIS_FAILED", domain: event.appDomain }).catch(() => {});
+      chrome.action.setBadgeText({ text: "?" });
+      chrome.action.setBadgeBackgroundColor({ color: "#8E8E93" });
+
+      if (chrome.storage.session) {
+        chrome.storage.session.set({ 
+          [`pending_analysis_${details.tabId}`]: { source: "fallback", appName: "", domain: event.appDomain } 
+        });
+      }
+    });
+
+  // Sync the base event. Best-effort. Will be updated later.
+  syncEvent(event).catch(err => console.error("[Consently] Proactive sync failed", err));
 });
 
 // Message Routing
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, _sendResponse) => {
   if (message.type === "CONTENT_SCRIPT_READY" && sender.tab?.id) {
     handleHandshake(sender.tab.id);
+  }
+
+  if (message.type === "SIGNIN_PAGE_DETECTED") {
+    const tabId = sender.tab?.id;
+    console.log("[Consently BG] SIGNIN_PAGE_DETECTED domain=", message.domain, "tabId=", tabId);
+    if (tabId && message.domain) {
+      let targetDomain = message.domain;
+      if (message.url) {
+        try {
+          const params = new URL(message.url).searchParams;
+          const redirectUri = params.get("redirect_uri") || params.get("redirecturi") || params.get("continue");
+          if (redirectUri) {
+            targetDomain = new URL(redirectUri).hostname;
+          }
+        } catch(_e) {}
+      }
+      handleSignInDetection(tabId, targetDomain);
+    } else {
+      console.warn("[Consently BG] SIGNIN_PAGE_DETECTED missing tabId or domain", { tabId, domain: message.domain });
+    }
   }
 
   if (message.type === "CONSENT_ACCEPTED") {
@@ -70,6 +178,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     } else {
       flushUnsynced();
     }
+  }
+
+  if (message.type === "OVERLAY_DISMISSED") {
+    chrome.action.setBadgeText({ text: "" });
   }
   
   if (message.type === "SCOUT_DISCOVERY") {
@@ -176,19 +288,119 @@ async function handleHandshake(tabId: number) {
 
   if (eventToShow) {
     console.log(`[Consently] Sending SHOW_OVERLAY to tab ${tabId}`);
-    chrome.tabs.sendMessage(tabId, { 
-      type: "SHOW_OVERLAY", 
-      event: eventToShow 
-    }).catch(err => {
-      // Common if the tab is still loading or user navigated away
+    
+    // Check if there's a stored analysis for this tab
+    let analysisObj = null;
+    let analyzing = true;
+    
+    if (chrome.storage.session) {
+      const data = await chrome.storage.session.get(`pending_analysis_${tabId}`);
+      if (data[`pending_analysis_${tabId}`]) {
+        analysisObj = data[`pending_analysis_${tabId}`];
+        analyzing = false; // it finished
+        await chrome.storage.session.remove(`pending_analysis_${tabId}`);
+      }
+    }
+
+    try {
+      await chrome.tabs.sendMessage(tabId, { 
+        type: "SHOW_OVERLAY", 
+        event: eventToShow,
+        analyzing
+      });
+
+      if (analysisObj) {
+        // If it finished before handshake, push the update now
+        await chrome.tabs.sendMessage(tabId, {
+          type: "UPDATE_OVERLAY",
+          analysis: analysisObj
+        });
+      }
+    } catch (err) {
       console.warn("[Consently] Message delivery failed (tab might have changed)", err);
-    });
+    }
   } else {
     console.log(`[Consently] Handshake complete - No fresh event found for tab ${tabId}`);
   }
 }
 
-async function handleScoutDiscovery(events: any[]) {
+async function handleSignInDetection(tabId: number, domain: string) {
+  const event = buildShellEvent(domain);
+
+  // 1. Persist shell event locally (risk will be patched when analysis arrives)
+  await appendEvent(event);
+
+  // 2. Store in session storage for handleHandshake fallback
+  if (chrome.storage.session) {
+    await chrome.storage.session.set({ [`pending_event_${tabId}`]: event });
+  }
+
+  // 3. Badge: amber while analyzing
+  chrome.action.setBadgeText({ text: "…" });
+  chrome.action.setBadgeBackgroundColor({ color: "#F59E0B" });
+
+  // 4. PHASE 1 — Show overlay immediately in "analyzing" state
+  //    No mock scopes. Just the site name and a spinner.
+  console.log("[Consently BG] Sending SHOW_OVERLAY to tab", tabId);
+  chrome.tabs.sendMessage(tabId, {
+    type: "SHOW_OVERLAY",
+    event,
+    analyzing: true,
+  }).then(() => {
+    console.log("[Consently BG] SHOW_OVERLAY delivered OK to tab", tabId);
+  }).catch((err) => {
+    console.warn("[Consently BG] SHOW_OVERLAY delivery FAILED for tab", tabId, err);
+  });
+
+  // 5. PHASE 2 — Fetch real privacy policy and analyze with Gemini
+  analyzePolicyForDomain(domain, event.appName)
+    .then(async (analysis) => {
+      if (!analysis) {
+        // Could not fetch or analyze — tell the overlay honestly
+        chrome.tabs.sendMessage(tabId, { type: "ANALYSIS_FAILED", domain }).catch(() => {});
+        chrome.action.setBadgeText({ text: "?" });
+        chrome.action.setBadgeBackgroundColor({ color: "#8E8E93" });
+        return;
+      }
+
+      console.log(`[Consently] Analysis ready for ${event.appName}`);
+
+      // Update overlay with real findings
+      chrome.tabs.sendMessage(tabId, { type: "UPDATE_OVERLAY", analysis }).catch(() => {});
+
+      // Update badge to reflect real risk
+      const badgeColor = analysis.riskVerdict === "HIGH"
+        ? "#EF4444" : analysis.riskVerdict === "MEDIUM" ? "#F59E0B" : "#10B981";
+      chrome.action.setBadgeText({ text: "!" });
+      chrome.action.setBadgeBackgroundColor({ color: badgeColor });
+
+      if (chrome.storage.session) {
+        await chrome.storage.session.set({ [`pending_analysis_${tabId}`]: analysis });
+      }
+
+      // Patch the stored event with real risk so the dashboard reflects truth
+      await patchEventRisk(event.id, analysis.riskVerdict, analysis.plainSummary, analysis.privacyPolicyUrl);
+    })
+    .catch((err) => {
+      console.error("[Consently] Policy analysis pipeline failed:", err);
+      chrome.tabs.sendMessage(tabId, { type: "ANALYSIS_FAILED", domain }).catch(() => {});
+      chrome.action.setBadgeText({ text: "?" });
+      chrome.action.setBadgeBackgroundColor({ color: "#8E8E93" });
+
+      if (chrome.storage.session) {
+        chrome.storage.session.set({ 
+          [`pending_analysis_${tabId}`]: { source: "fallback", appName: "", domain } 
+        });
+      }
+    });
+
+  // 6. Background sync (best-effort)
+  syncEvent(event).catch((err) =>
+    console.error("[Consently] Sign-in event sync failed", err)
+  );
+}
+
+async function handleScoutDiscovery(events: Partial<ConsentEvent>[]) {
   for (const eventData of events) {
     const event: ConsentEvent = {
       id: crypto.randomUUID(),

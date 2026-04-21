@@ -2,7 +2,8 @@ import { ConsentEvent } from "../lib/types";
 import { getState, markSynced } from "../lib/storage";
 
 // In production, this would be your Vercel/Railway URL
-const API_BASE = "http://localhost:3000";
+// Use dynamic dashboard URL from environment or fallback to localhost
+const API_BASE = import.meta.env.VITE_DASHBOARD_URL || "http://localhost:3000";
 
 export async function syncEvent(event: ConsentEvent): Promise<boolean> {
   const state = await getState();
@@ -13,7 +14,7 @@ export async function syncEvent(event: ConsentEvent): Promise<boolean> {
     return false;
   }
 
-  console.log(`[Consently] Syncing event for ${event.appName} (User: ${userId}) to ${API_BASE}...`);
+  console.debug(`[Consently] Syncing event for ${event.appName} to ${API_BASE}...`);
   try {
     const res = await fetch(`${API_BASE}/api/consents`, {
       method: "POST",
@@ -30,7 +31,8 @@ export async function syncEvent(event: ConsentEvent): Promise<boolean> {
       return false;
     }
   } catch (e) {
-    console.error("[Consently] Network error during sync", e);
+    // Network unavailable (server offline / no connection) — expected in dev. Not an error.
+    console.warn("[Consently] Sync skipped — server unreachable for", event.appName);
     return false;
   }
 }

@@ -20,11 +20,39 @@ export function parseOAuthUrl(urlStr: string, provider: OAuthProvider): ConsentE
         const rUrl = new URL(redirectUri);
         appDomain = rUrl.hostname;
       }
-    } catch (e) {}
+    } catch (_e) {}
 
     // Split and normalize scopes
     const scopesRaw = scopeRaw ? scopeRaw.split(/[ +]/).filter(Boolean) : [];
     const scopesTranslated = scopesRaw.map(translateScope);
+    
+    // Ignore 1st-party logins and unknown apps where we can't analyze a policy
+    const PROVIDER_DOMAINS = [
+      "google.com",
+      "github.com",
+      "facebook.com",
+      "microsoft.com",
+      "microsoftonline.com",
+      "live.com",
+      "apple.com",
+      "okta.com",
+      "auth0.com",
+      "amazon.com",
+      "linkedin.com",
+      "twitter.com",
+      "x.com",
+      "firebaseapp.com",
+      "supabase.co"
+    ];
+
+    const isProvider = PROVIDER_DOMAINS.some(d => 
+      appDomain === d || appDomain.endsWith("." + d)
+    );
+
+    if (appDomain === "unknown" || isProvider) {
+      console.log(`[Consently] Skipping 1st-party or provider domain: ${appDomain}`);
+      return null;
+    }
     
     const overallRisk = computeOverallRisk(scopesTranslated);
 

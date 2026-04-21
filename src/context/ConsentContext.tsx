@@ -1,7 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
-import { CompanyRecord, ActivityRecord } from "@/lib/constants";
+import { CompanyRecord, ActivityRecord, DEMO_USER_ID } from "@/lib/constants";
+
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { DBCompanyRecord, DBHistoryRecord } from "@/types/consent";
@@ -59,7 +60,7 @@ export function ConsentProvider({ children }: { children: ReactNode }) {
       
       if (isDemo) {
         const demoUser = {
-          id: "11111111-1111-1111-1111-111111111111",
+          id: DEMO_USER_ID,
           email: "demo@consently.ai",
           user_metadata: { full_name: "Demo User" }
         };
@@ -67,6 +68,7 @@ export function ConsentProvider({ children }: { children: ReactNode }) {
         fetchUserData(demoUser.id);
         return;
       }
+
 
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {

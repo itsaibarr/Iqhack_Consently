@@ -5,12 +5,20 @@ import { getState, markSynced } from "../lib/storage";
 const API_BASE = "http://localhost:3000";
 
 export async function syncEvent(event: ConsentEvent): Promise<boolean> {
-  console.log(`[Consently] Syncing event for ${event.appName} to ${API_BASE}...`);
+  const state = await getState();
+  const userId = event.userId || state.userId;
+  
+  if (!userId) {
+    console.warn(`[Consently] Skipping sync for ${event.appName}: No userId found`);
+    return false;
+  }
+
+  console.log(`[Consently] Syncing event for ${event.appName} (User: ${userId}) to ${API_BASE}...`);
   try {
     const res = await fetch(`${API_BASE}/api/consents`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(event),
+      body: JSON.stringify({ ...event, userId }),
     });
     
     if (res.ok) {

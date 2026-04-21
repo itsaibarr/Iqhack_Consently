@@ -81,7 +81,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 // External Message Routing (Web to Extension)
-chrome.runtime.onMessageExternal.addListener(async (message, sender, sendResponse) => {
+chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
   console.log("[Consently] Received external message:", message, "from:", sender.url);
   
   // Validate sender if possible (optional security check for local dev)
@@ -93,28 +93,42 @@ chrome.runtime.onMessageExternal.addListener(async (message, sender, sendRespons
   if (message.type === "AUTH_SUCCESS") {
     console.log("[Consently] Auth success received from web app for user:", message.userId);
     
-    // Save user state in local storage using our helper
-    const state = await getState();
-    await saveState({
-      ...state,
-      userId: message.userId,
-      userEmail: message.userEmail || state.userEmail
-    });
+    // Use an IIFE or separate async call to handle the storage operations
+    (async () => {
+      try {
+        // Save user state in local storage using our helper
+        const state = await getState();
+        await saveState({
+          ...state,
+          userId: message.userId,
+          userEmail: message.userEmail || state.userEmail,
+          handshakeComplete: true
+        });
 
-    // Notify internal popup if it's open
-    chrome.runtime.sendMessage({ type: "AUTH_SYNC_COMPLETE", userId: message.userId });
+        // Sync any events detected while logged out
+        await flushUnsynced();
 
-    // Inform user of connection success
-    if (chrome.notifications) {
-      chrome.notifications.create({
-        type: "basic",
-        iconUrl: "public/icons/icon128.png",
-        title: "Consently Connected",
-        message: `Welcome ${message.userEmail || "user"}! Your extension is now linked.`
-      });
-    }
+        // Notify internal popup if it's open
+        chrome.runtime.sendMessage({ type: "AUTH_SYNC_COMPLETE", userId: message.userId });
 
-    sendResponse({ success: true });
+        // Inform user of connection success
+        if (chrome.notifications) {
+          chrome.notifications.create({
+            type: "basic",
+            iconUrl: "public/icons/icon128.png",
+            title: "Consently Connected",
+            message: `Welcome ${message.userEmail || "user"}! Your extension is now linked.`
+          });
+        }
+
+        sendResponse({ success: true });
+      } catch (err) {
+        console.error("[Consently] Auth sync storage error:", err);
+        sendResponse({ success: false, error: "Storage error" });
+      }
+    })();
+
+    return true; // CRITICAL: Keep channel open for async sendResponse
   }
 });
 

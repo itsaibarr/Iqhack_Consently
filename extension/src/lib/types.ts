@@ -20,6 +20,7 @@ export interface ConsentEvent {
   scopesTranslated: ScopeEntry[];
   overallRisk: RiskLevel;
   userAction: "granted" | "cancelled" | "detected"; // "detected" if we can't confirm outcome
+  userId?: string;        // Tied to dashboard user
   synced: boolean;        // false until API confirms receipt
 }
 
@@ -27,6 +28,7 @@ export interface ExtensionState {
   events: ConsentEvent[];
   lastSyncAt: string | null;
   userId: string | null;
+  userEmail: string | null;
   handshakeComplete?: boolean;
   isDemoMode?: boolean;
 }

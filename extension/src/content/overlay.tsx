@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { ConsentEvent, ScopeEntry } from "../lib/types";
+import React, { useState, useEffect, useCallback } from "react";
+import { ConsentEvent } from "../lib/types";
 
 // Design Tokens (Mirrored from globals.css for consistent look)
 const COLORS = {
@@ -20,24 +20,24 @@ export const ConsentOverlay: React.FC<{ event: ConsentEvent; onAdd: () => void; 
   const [isClosing, setIsClosing] = useState(false);
   const [added, setAdded] = useState(false);
 
+  const handleDismiss = useCallback(() => {
+    setIsClosing(true);
+    setTimeout(() => onDismiss(), 400);
+  }, [onDismiss]);
+
+  const handleAdd = useCallback(() => {
+    setAdded(true);
+    onAdd();
+    setTimeout(() => handleDismiss(), 1500);
+  }, [onAdd, handleDismiss]);
+
   useEffect(() => {
     // Auto-dismiss after 12s
     const timer = setTimeout(() => {
       if (!added) handleDismiss();
     }, 12000);
     return () => clearTimeout(timer);
-  }, [added]);
-
-  const handleAdd = () => {
-    setAdded(true);
-    onAdd();
-    setTimeout(() => handleDismiss(), 1500);
-  };
-
-  const handleDismiss = () => {
-    setIsClosing(true);
-    setTimeout(() => onDismiss(), 400);
-  };
+  }, [added, handleDismiss]);
 
   const riskColor = event.overallRisk === "HIGH" ? COLORS.riskHigh : 
                     event.overallRisk === "MEDIUM" ? COLORS.riskMedium : COLORS.riskLow;
@@ -61,7 +61,7 @@ export const ConsentOverlay: React.FC<{ event: ConsentEvent; onAdd: () => void; 
         <div style={styles.scopeList}>
           {event.scopesTranslated.slice(0, 4).map((scope, i) => (
             <div key={i} style={styles.scopeItem}>
-              <span style={styles.scopeDot(scope.risk)} />
+              <span style={getScopeDotStyle(scope.risk)} />
               <span style={styles.scopeLabel}>{scope.label}</span>
             </div>
           ))}
@@ -99,7 +99,14 @@ export const ConsentOverlay: React.FC<{ event: ConsentEvent; onAdd: () => void; 
   );
 };
 
-const styles: Record<string, any> = {
+const getScopeDotStyle = (risk: string): React.CSSProperties => ({
+  width: "6px",
+  height: "6px",
+  borderRadius: "50%",
+  backgroundColor: risk === "HIGH" ? COLORS.riskHigh : risk === "MEDIUM" ? COLORS.riskMedium : COLORS.riskLow
+});
+
+const styles: Record<string, React.CSSProperties> = {
   container: {
     width: "320px",
     backgroundColor: "#FFFFFF",
@@ -163,12 +170,6 @@ const styles: Record<string, any> = {
     alignItems: "center",
     gap: "8px"
   },
-  scopeDot: (risk: string) => ({
-    width: "6px",
-    height: "6px",
-    borderRadius: "50%",
-    backgroundColor: risk === "HIGH" ? COLORS.riskHigh : risk === "MEDIUM" ? COLORS.riskMedium : COLORS.riskLow
-  }),
   scopeLabel: {
     fontSize: "13px",
     fontWeight: "500",

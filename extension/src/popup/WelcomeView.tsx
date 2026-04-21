@@ -1,4 +1,4 @@
-import { Shield, ArrowRight, CheckCircle2, CloudSync } from "lucide-react";
+import { Shield, ArrowRight, CheckCircle2, RefreshCw } from "lucide-react";
 import { saveState } from "../lib/storage";
 
 interface WelcomeViewProps {
@@ -78,10 +78,7 @@ export default function WelcomeView({ onSyncComplete }: WelcomeViewProps) {
             <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
           </button>
           
-          <div className="flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-neutral-300">
-            <CloudSync size={12} />
-            Encrypted Handshake Protocol
-          </div>
+
         </div>
       </div>
     </div>

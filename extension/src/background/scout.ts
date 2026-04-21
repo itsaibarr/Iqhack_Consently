@@ -84,8 +84,3 @@ function showScoutBadge(count: number) {
   });
 }
 
-// Auto-run if on the target page
-if (typeof window !== "undefined") {
-  // Give it a second for dynamic content to load
-  setTimeout(scoutGooglePermissions, 2000);
-}

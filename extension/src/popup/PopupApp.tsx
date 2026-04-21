@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Shield, Activity, Zap, RefreshCw, ChevronRight, Globe, Lock } from "lucide-react";
-import { getState, saveState } from "../lib/storage";
+import { getState } from "../lib/storage";
 import WelcomeView from "./WelcomeView";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -23,21 +23,39 @@ export default function PopupApp() {
   const [pulses, setPulses] = useState<ConsentPulse[]>([]);
   const [score, setScore] = useState(88);
 
-  useEffect(() => {
-    refreshState();
-  }, []);
 
-  const refreshState = async () => {
+
+  const refreshState = useCallback(async () => {
     try {
       const data = await getState();
       if (data.isDemoMode || (data.userId && data.handshakeComplete)) {
         setHasSync(true);
-        // Realistic demo pulses
-        setPulses([
-          { id: "1", service: "Google Auth", action: "ingested", timestamp: "Just now", dataTypes: ["email", "profile"] },
-          { id: "2", service: "LinkedIn", action: "shared", timestamp: "2m ago", dataTypes: ["connections"] },
-          { id: "3", service: "Meta AI", action: "blocked", timestamp: "15m ago", dataTypes: ["location"] },
-        ]);
+        
+        // Map real events from storage to UI pulses
+        const mappedPulses: ConsentPulse[] = data.events.slice(0, 10).map(event => ({
+          id: event.id,
+          service: event.appName,
+          action: event.userAction === "granted" ? "ingested" : "shared", // Simple mapping for MVP
+          timestamp: new Date(event.detectedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          dataTypes: event.scopesTranslated.map(s => s.label.toLowerCase())
+        }));
+
+        setPulses(mappedPulses);
+
+        // Calculate security score
+        let calculatedScore = 100;
+        const uniqueServices = new Set();
+        
+        data.events.slice(0, 20).forEach(event => {
+          if (!uniqueServices.has(event.appName)) {
+            uniqueServices.add(event.appName);
+            if (event.overallRisk === "HIGH") calculatedScore -= 12;
+            else if (event.overallRisk === "MEDIUM") calculatedScore -= 5;
+            else if (event.overallRisk === "LOW") calculatedScore -= 1;
+          }
+        });
+
+        setScore(Math.max(calculatedScore, 0));
       } else {
         setHasSync(false);
       }
@@ -47,7 +65,22 @@ export default function PopupApp() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    refreshState();
+
+    // Listen for sync completion from background script
+    const listener = (message: { type: string }) => {
+      if (message.type === "AUTH_SYNC_COMPLETE") {
+        console.log("[Consently] Auth sync detected, refreshing popup...");
+        refreshState();
+      }
+    };
+
+    chrome.runtime.onMessage.addListener(listener);
+    return () => chrome.runtime.onMessage.removeListener(listener);
+  }, [refreshState]);
 
   if (loading) return (
     <div className="flex h-[600px] w-[400px] items-center justify-center bg-neutral-25">
@@ -137,14 +170,11 @@ export default function PopupApp() {
       {/* Footer */}
       <footer className="border-t border-neutral-100 bg-white p-4">
         <button 
-          onClick={() => window.open(import.meta.env.VITE_DASHBOARD_URL || "http://localhost:3000/dashboard")}
+          onClick={() => window.open(import.meta.env.VITE_DASHBOARD_URL || "http://localhost:3000")}
           className="btn-primary w-full shadow-md"
         >
           Open Sovereignty Hub
         </button>
-        <p className="mt-3 text-center text-[10px] font-bold text-neutral-300">
-          SECURE PROTOCOL V1.2 • AGENT ID: {Math.random().toString(36).substring(7).toUpperCase()}
-        </p>
       </footer>
     </div>
   );

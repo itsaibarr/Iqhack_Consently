@@ -25,7 +25,7 @@ export function SidebarWrapper({ children }: { children: ReactNode }) {
       <main 
         className={cn(
             "min-h-screen transition-all duration-300",
-            isCollapsed ? "pl-20" : "pl-72"
+            isCollapsed ? "pl-16" : "pl-72"
         )}
       >
         {children}

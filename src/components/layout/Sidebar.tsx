@@ -1,6 +1,6 @@
 "use client";
 
-import { History, Shield, Settings, Zap, LogOut, MoreHorizontal, Globe, User as UserIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { LayoutGrid, History, Shield, Settings, Zap, LogOut, MoreHorizontal, Globe, User as UserIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -16,6 +16,7 @@ function cn(...inputs: ClassValue[]) {
 
 const NAV_ITEMS = [
   { name: "Consent Map", icon: Shield, href: "/" },
+  { name: "Inventory", icon: LayoutGrid, href: "/inventory" },
   { name: "Live Map", icon: Globe, href: "/map" },
   { name: "Activity", icon: History, href: "/activity" },
   { name: "Security Audit", icon: Zap, href: "/audit" },
@@ -34,17 +35,20 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
   return (
     <motion.aside 
         initial={false}
-        animate={{ width: isCollapsed ? 80 : 288 }}
+        animate={{ width: isCollapsed ? 64 : 288 }}
         className="fixed left-0 top-0 z-40 h-screen border-r border-[var(--border-subtle)] bg-[var(--bg-sidebar)] p-4 flex flex-col"
     >
       <div className="flex h-full flex-col">
         {/* Brand */}
-        <div className="flex items-center justify-between pb-10">
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-xl)] bg-[var(--color-primary-500)] text-white shadow-sm">
-              <Shield size={22} fill="currentColor" fillOpacity={0.2} />
-            </div>
-            {!isCollapsed && (
+        <div className={cn(
+          "flex items-center pb-10",
+          isCollapsed ? "justify-center" : "justify-between"
+        )}>
+          {!isCollapsed && (
+            <div className="flex items-center gap-3 overflow-hidden">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-xl)] bg-[var(--color-primary-500)] text-white shadow-sm">
+                <Shield size={22} fill="currentColor" fillOpacity={0.2} />
+              </div>
               <motion.h1 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -52,8 +56,8 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
               >
                 Consently
               </motion.h1>
-            )}
-          </div>
+            </div>
+          )}
           
           <button 
             onClick={() => setIsCollapsed(!isCollapsed)}
@@ -73,9 +77,10 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
               <Link
                 key={item.name}
                 href={item.href}
+                title={isCollapsed ? item.name : undefined}
                 className={cn(
-                  "flex h-10 items-center rounded-[var(--radius-md)] px-3 text-[13px] font-semibold transition-all",
-                  isCollapsed ? "justify-center" : "justify-between",
+                  "flex h-10 items-center rounded-[var(--radius-md)] text-[13px] font-semibold transition-all",
+                  isCollapsed ? "justify-center w-10 mx-auto" : "justify-between px-3",
                   isActive
                     ? "bg-[var(--color-neutral-0)] text-[var(--text-primary)] shadow-sm"
                     : "text-[var(--text-secondary)] hover:bg-[var(--color-neutral-100)] hover:text-[var(--text-primary)]"
@@ -102,7 +107,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
                         className={cn(
                             "absolute bottom-full mb-2 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-white p-1.5 shadow-lg",
-                            isCollapsed ? "left-full ml-2 w-48" : "left-0 right-0"
+                            isCollapsed ? "left-0 w-48" : "left-0 right-0"
                         )}
                     >
                         <Link
@@ -136,8 +141,8 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
             <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 className={cn(
-                    "flex w-full items-center rounded-[var(--radius-md)] py-2 px-2 transition-all overflow-hidden",
-                    isCollapsed ? "justify-center" : "justify-between",
+                    "flex w-full items-center rounded-[var(--radius-md)] py-2 transition-all overflow-hidden",
+                    isCollapsed ? "justify-center" : "justify-between px-2",
                     isDropdownOpen ? "bg-[var(--color-neutral-100)]" : "hover:bg-[var(--color-neutral-100)]"
                 )}
             >

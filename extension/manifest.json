@@ -40,7 +40,9 @@
   "externally_connectable": {
     "matches": [
       "http://localhost:3000/*",
-      "https://consently-app.vercel.app/*"
+      "https://consently.vercel.app/*",
+      "https://consently-itsaibarrs-projects.vercel.app/*",
+      "https://consently-git-main-itsaibarrs-projects.vercel.app/*"
     ]
   }
 }

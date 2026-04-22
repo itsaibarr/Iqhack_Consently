@@ -10,7 +10,7 @@ export default function WelcomeView({ onSyncComplete }: WelcomeViewProps) {
     // In a real hackathon demo, we trigger a window to the dashboard
     // or simulate a login. For now, since user is signed in on dashboard
     // we "connect" to the local auth state.
-    const dashboardUrl = import.meta.env.VITE_DASHBOARD_URL || "http://localhost:3000/auth";
+    const dashboardUrl = import.meta.env.VITE_DASHBOARD_URL || "https://consently.vercel.app/auth";
     window.open(dashboardUrl, "_blank");
     
     // Simulate successful handshake for the demo

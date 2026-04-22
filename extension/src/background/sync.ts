@@ -3,7 +3,7 @@ import { getState, markSynced, updateSettings } from "../lib/storage";
 
 // In production, this would be your Vercel/Railway URL
 // Use dynamic dashboard URL from environment or fallback to localhost
-const API_BASE = import.meta.env.VITE_DASHBOARD_URL || "http://localhost:3000";
+const API_BASE = import.meta.env.VITE_DASHBOARD_URL || "https://consently.vercel.app";
 
 export async function syncEvent(event: ConsentEvent): Promise<boolean> {
   const state = await getState();

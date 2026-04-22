@@ -38,7 +38,7 @@ export default function PopupApp() {
       if (data.isDemoMode || (data.userId && data.handshakeComplete)) {
         setHasSync(true);
         
-        const API_BASE = import.meta.env.VITE_DASHBOARD_URL || "http://localhost:3000";
+        const API_BASE = import.meta.env.VITE_DASHBOARD_URL || "https://consently.vercel.app";
         const userId = data.userId || (data.isDemoMode ? "demo-user-id" : null);
 
         let serverCompanies = [];
@@ -267,7 +267,7 @@ export default function PopupApp() {
       {/* Footer */}
       <footer className="border-t border-neutral-100 bg-white p-4">
         <button 
-          onClick={() => window.open(import.meta.env.VITE_DASHBOARD_URL || "http://localhost:3000")}
+          onClick={() => window.open(import.meta.env.VITE_DASHBOARD_URL || "https://consently.vercel.app")}
           className="btn-primary w-full shadow-md"
         >
           Open Sovereignty Hub

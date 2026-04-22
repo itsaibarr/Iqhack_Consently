@@ -46,7 +46,7 @@ export interface ActivityRecord {
 
 // Extension Integration
 export const EXTENSION_ID = "kegngnalimkofmfaeefinlljgdhomgon";
-export const DASHBOARD_URL = "http://localhost:3000";
+export const DASHBOARD_URL = "https://consently.vercel.app";
 
 // Standard Demo User ID (exists in auth.users)
 export const DEMO_USER_ID = "15e1f301-268a-434c-b4d5-8927fd698456";

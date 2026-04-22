@@ -239,7 +239,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // ---------------------------------------------------------------------------
 
 chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
-  if (sender.url && !sender.url.includes("localhost:3000")) {
+  const TRUSTED_ORIGINS = ["localhost:3000", "consently.vercel.app", "consently-itsaibarrs-projects.vercel.app", "consently-git-main-itsaibarrs-projects.vercel.app"];
+  if (sender.url && !TRUSTED_ORIGINS.some(o => sender.url!.includes(o))) {
     console.warn("[Consently] Rejected external message from untrusted origin:", sender.url);
     return;
   }

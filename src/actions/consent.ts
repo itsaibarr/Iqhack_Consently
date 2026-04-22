@@ -2,9 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase-server";
 
-// This is a real server action for the MVP
-export async function revokeConsent(id: string) {
-  console.log(`Revoking consent for ID: ${id}`);
+export async function revokeConsent(id: string, reason?: string) {
   
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -37,10 +35,46 @@ export async function revokeConsent(id: string) {
       user_id: user.id,
       company_name: typedCompany.name,
       action: 'REVOKED',
-      data_types: typedCompany.data_types.map((dt: { name: string }) => dt.name)
+      data_types: typedCompany.data_types.map((dt: { name: string }) => dt.name),
+      reason: reason ?? null,
     });
   }
   
+  revalidatePath("/");
+  return { success: true };
+}
+
+export async function reconnectService(id: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return { success: false, error: "Not authenticated" };
+
+  const { data: company } = await supabase
+    .from('companies')
+    .select('name, data_types')
+    .eq('id', id)
+    .single();
+
+  const typedCompany = company as { name: string; data_types: { name: string }[] } | null;
+
+  const { error } = await supabase
+    .from('companies')
+    .update({ status: 'ACTIVE' })
+    .eq('id', id)
+    .eq('user_id', user.id);
+
+  if (error) return { success: false, error: error.message };
+
+  if (typedCompany) {
+    await supabase.from('history').insert({
+      user_id: user.id,
+      company_name: typedCompany.name,
+      action: 'GRANTED',
+      data_types: typedCompany.data_types.map((dt: { name: string }) => dt.name),
+    });
+  }
+
   revalidatePath("/");
   return { success: true };
 }

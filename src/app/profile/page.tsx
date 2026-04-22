@@ -5,10 +5,19 @@ import { Container } from "@/components/layout/Container";
 import { useConsent } from "@/context/ConsentContext";
 import { Shield, Mail, Fingerprint, Calendar, Award } from "lucide-react";
 import { SummaryCard } from "@/components/ui/SummaryCard";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { Loader2, CheckCircle2, AlertTriangle, X } from "lucide-react";
+import { calculateTrustScore } from "@/lib/privacy";
+import { RevokeConfirmModal } from "@/components/consent/RevokeConfirmModal";
+import { ToastContainer, useToast } from "@/components/ui/Toast";
 
 export default function ProfilePage() {
-  const { user, companies } = useConsent();
+  const [isAuditing, setIsAuditing] = useState(false);
+  const [auditComplete, setAuditComplete] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const { user, companies, revokeAllHighRisk } = useConsent();
+  const { toasts, showToast, dismiss } = useToast();
+
   const memberSince = useMemo(() => {
     const createdAt = user?.created_at;
     if (!createdAt) return "";
@@ -19,9 +28,41 @@ export default function ProfilePage() {
   const totalConsents = companies.length;
   const activeConsents = companies.filter(c => c.status === "ACTIVE").length;
   const revokedConsents = companies.filter(c => c.status === "REVOKED").length;
-  
-  // Simulated trust score logic
-  const trustScore = Math.max(0, 100 - (companies.filter(c => c.risk === "HIGH" && c.status === "ACTIVE").length * 15));
+
+  // Unified trust score logic
+  const trustScore = useMemo(() => {
+    const active = companies.filter(c => c.status === "ACTIVE");
+    const stats = {
+      high: active.filter(c => c.risk === "HIGH").length,
+      medium: active.filter(c => c.risk === "MEDIUM").length,
+      low: active.filter(c => c.risk === "LOW").length,
+    };
+    
+    return calculateTrustScore(stats);
+  }, [companies]);
+
+  const highRiskServices = useMemo(() => 
+    companies.filter(c => c.risk === "HIGH" && c.status === "ACTIVE"),
+  [companies]);
+
+  const handleBulkAudit = async (reason?: string) => {
+    setIsAuditing(true);
+    setShowConfirmModal(false);
+    try {
+      const { count, emailsSent } = await revokeAllHighRisk(reason || "Bulk audit initiated from profile dashboard.");
+      if (count > 0) {
+        setAuditComplete(true);
+        const emailNote = emailsSent > 0 ? ` ${emailsSent} GDPR requests sent.` : "";
+        showToast(`${count} high-risk services revoked.${emailNote}`, "success");
+        setTimeout(() => setAuditComplete(false), 3000);
+      }
+    } catch (err) {
+      console.error("Bulk audit failed:", err);
+      showToast("Security audit failed. Please try again.", "error");
+    } finally {
+      setIsAuditing(false);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-[#FDFDFD] pt-20 pb-32">
@@ -132,14 +173,41 @@ export default function ProfilePage() {
                     <p className="text-body-sm text-neutral-500 leading-relaxed mb-auto">
                         Did you know that revoking a single high-risk service can improve your privacy score by up to 15 points?
                     </p>
-                    <button className="w-full mt-8 py-3 rounded-[var(--radius-md)] bg-neutral-900 text-white font-bold text-[12px] hover:bg-neutral-800 transition-all active:scale-95">
-                        Audit High Risk Now
+                    <button 
+                        onClick={() => setShowConfirmModal(true)}
+                        disabled={isAuditing || auditComplete || highRiskServices.length === 0}
+                        className="w-full mt-8 py-3 rounded-[var(--radius-md)] bg-neutral-900 text-white font-bold text-[12px] hover:bg-neutral-800 transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
+                    >
+                        {isAuditing ? (
+                            <>
+                                <Loader2 size={14} className="animate-spin" />
+                                Auditing...
+                            </>
+                        ) : auditComplete ? (
+                            <>
+                                <CheckCircle2 size={14} className="text-emerald-400" />
+                                Audit Complete
+                            </>
+                        ) : (
+                            "Audit High Risk Now"
+                        )}
                     </button>
                 </div>
             </div>
           </div>
         </div>
       </Container>
+
+      <RevokeConfirmModal
+        isOpen={showConfirmModal}
+        mode="bulk"
+        services={highRiskServices}
+        onConfirm={handleBulkAudit}
+        onCancel={() => setShowConfirmModal(false)}
+        isLoading={isAuditing}
+      />
+
+      <ToastContainer toasts={toasts} dismiss={dismiss} />
     </main>
   );
 }

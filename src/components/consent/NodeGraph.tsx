@@ -36,7 +36,7 @@ export function NodeGraph({
   className?: string
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const fgRef = useRef<any>(undefined);
+  const fgRef = useRef<ForceGraphMethods>(undefined);
   const [dimensions, setDimensions] = useState({ width: 800, height: 400 });
   const [mounted, setMounted] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -109,14 +109,15 @@ export function NodeGraph({
       fg.d3Force('link')?.distance(baseDistance);
       
       // Stronger collision to ensure labels don't overlap
-      fg.d3Force('collide', d3.forceCollide((d: GraphNode) => d.val + 12));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      fg.d3Force('collide', d3.forceCollide((d: any) => (d as GraphNode).val + 12));
       
       // Radial force pulls back less aggressively when spread out
       fg.d3Force('radial', d3.forceRadial(baseDistance, 0, 0).strength(0.05));
       
-      // @ts-ignore - property exists at runtime
+      // @ts-expect-error - property exists at runtime
       if (fg.d3VelocityDecay) {
-        // @ts-ignore
+        // @ts-expect-error - property exists at runtime
         fg.d3VelocityDecay(0.3);
       }
       

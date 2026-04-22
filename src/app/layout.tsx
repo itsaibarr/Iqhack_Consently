@@ -16,6 +16,9 @@ const mono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Consently | Your Personal Consent OS",
   description: "Map and control your digital footprint in one click.",
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 import { ConsentProvider } from "@/context/ConsentContext";

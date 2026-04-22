@@ -35,10 +35,21 @@ const ACTION_CONFIG = {
 type ActionType = keyof typeof ACTION_CONFIG;
 
 import { useConsent } from "@/context/ConsentContext";
+import { RevokeConfirmModal } from "@/components/consent/RevokeConfirmModal";
+import { ServiceDetailView } from "@/components/consent/ServiceDetailView";
+import { useToast, ToastContainer } from "@/components/ui/Toast";
+import { CompanyRecord } from "@/lib/constants";
 
 export default function ActivityPage() {
-  const { history } = useConsent();
+  const { history, companies, revokeConsent, reconnectService, user } = useConsent();
+  const { toasts, showToast, dismiss } = useToast();
+  
   const [filter, setFilter] = useState<"ALL" | ActionType>("ALL");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  
+  // Revocation state if needed in detail view
+  const [pendingRevokeId, setPendingRevokeId] = useState<string | null>(null);
+  const [isRevoking, setIsRevoking] = useState(false);
 
   const filteredHistory = useMemo(() => {
     return history.filter(item => {
@@ -46,8 +57,73 @@ export default function ActivityPage() {
     });
   }, [filter, history]);
 
+  const selectedService = companies.find(c => c.id === selectedId) ?? null;
+  const pendingService = companies.find((c) => c.id === pendingRevokeId) ?? null;
+
+  const handleRevokeConfirm = async (reason?: string) => {
+    if (!pendingRevokeId) return;
+    setIsRevoking(true);
+    const { success } = await revokeConsent(pendingRevokeId, reason);
+    setIsRevoking(false);
+    setPendingRevokeId(null);
+    setSelectedId(null);
+    showToast(
+      success ? "Access revoked successfully." : "Failed to revoke access.",
+      success ? "success" : "error"
+    );
+  };
+
+  const handleReconnect = async (id: string) => {
+    const { success } = await reconnectService(id);
+    showToast(
+      success ? "Service reconnected." : "Failed to reconnect.",
+      success ? "success" : "error"
+    );
+  };
+
+  const handleDownloadHistory = () => {
+    if (history.length === 0) {
+      showToast("No history to download.", "error");
+      return;
+    }
+
+    const reportHeader = `CONSENTLY SECURITY AUDIT REPORT\nGenerated: ${new Date().toLocaleString()}\nUser: ${user?.email || "Demo User"}\n-------------------------------------------\n\n`;
+    const reportBody = history.map(item => {
+      return `[${item.timestamp}] ${item.companyName}\nAction: ${item.action}\nData Shared: ${item.dataTypes.join(", ")}\nReason: ${item.reason || "N/A"}\n-------------------------------------------`;
+    }).join("\n\n");
+
+    const fullReport = reportHeader + reportBody;
+    const blob = new Blob([fullReport], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `consently-audit-log-${new Date().toISOString().split("T")[0]}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    showToast("Audit log exported successfully.", "success");
+  };
+
   return (
     <main className="min-h-screen bg-[#FDFDFD] pb-32">
+      <AnimatePresence mode="wait">
+        {selectedId && selectedService ? (
+          <ServiceDetailView
+            key="detail"
+            service={selectedService as CompanyRecord}
+            onBack={() => setSelectedId(null)}
+            onRevoke={(id) => setPendingRevokeId(id)}
+            onReconnect={handleReconnect}
+          />
+        ) : (
+          <motion.div
+            key="activity-main"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
       {/* Header Section */}
       <div className="border-b border-neutral-100 bg-white pt-24 pb-12">
         <Container>
@@ -161,7 +237,19 @@ export default function ActivityPage() {
                         </div>
 
                         <div className="mt-4 flex justify-end">
-                          <button className="flex items-center gap-1 text-label-sm text-neutral-400 transition-colors hover:text-neutral-900">
+                          <button 
+                            onClick={() => {
+                                const relatedCompany = companies.find(c => 
+                                    c.name.toLowerCase().trim() === item.companyName.toLowerCase().trim()
+                                );
+                                if (relatedCompany) {
+                                    setSelectedId(relatedCompany.id);
+                                } else {
+                                    showToast("Service details no longer available.", "error");
+                                }
+                            }}
+                            className="flex items-center gap-1 text-label-sm text-neutral-400 transition-colors hover:text-neutral-900"
+                          >
                             Details <ChevronRight size={14} />
                           </button>
                         </div>
@@ -198,13 +286,34 @@ export default function ActivityPage() {
                 </div>
               </div>
               
-              <button className="btn-primary mt-8 w-full">
+              <button 
+                onClick={handleDownloadHistory}
+                className="btn-primary mt-8 w-full"
+              >
                 Download History (PDF)
               </button>
             </div>
           </div>
         </div>
       </Container>
+
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Revoke confirmation modal */}
+      {pendingService && (
+        <RevokeConfirmModal
+          isOpen={!!pendingRevokeId}
+          mode="single"
+          service={pendingService as CompanyRecord}
+          onConfirm={handleRevokeConfirm}
+          onCancel={() => setPendingRevokeId(null)}
+          isLoading={isRevoking}
+        />
+      )}
+
+      <ToastContainer toasts={toasts} dismiss={dismiss} />
     </main>
   );
 }

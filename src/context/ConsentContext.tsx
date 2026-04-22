@@ -6,12 +6,15 @@ import { CompanyRecord, ActivityRecord, DEMO_USER_ID } from "@/lib/constants";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { DBCompanyRecord, DBHistoryRecord } from "@/types/consent";
+import { sendGdprDeletionRequest } from "@/actions/gdpr";
 
 interface ConsentContextType {
   user: { id: string; email?: string; user_metadata?: Record<string, unknown>; created_at?: string } | null;
   companies: CompanyRecord[];
   history: ActivityRecord[];
-  revokeConsent: (id: string) => void;
+  revokeConsent: (id: string, reason?: string) => Promise<{ success: boolean; emailSent: boolean; emailTo?: string }>;
+  revokeAllHighRisk: (reason?: string) => Promise<{ count: number; emailsSent: number }>;
+  reconnectService: (id: string) => Promise<{ success: boolean }>;
   addHistoryEvent: (event: Omit<ActivityRecord, "id">) => void;
   syncExtensionEvents: () => Promise<void>;
 }
@@ -30,7 +33,8 @@ const mapCompany = (raw: DBCompanyRecord): CompanyRecord => ({
   description: raw.description || "",
   logoUid: raw.logo_uid || "",
   lastAccessed: raw.last_accessed || "Never",
-  purpose: raw.purpose || "Service functionality"
+  purpose: raw.purpose || "Service functionality",
+  policyReport: raw.policy_report ?? undefined
 });
 
 const mapHistory = (raw: DBHistoryRecord): ActivityRecord => ({
@@ -154,30 +158,103 @@ export function ConsentProvider({ children }: { children: ReactNode }) {
     // Handled by sync API
   };
 
-  const revokeConsent = async (id: string) => {
+  const revokeConsent = async (id: string, reason?: string): Promise<{ success: boolean; emailSent: boolean; emailTo?: string }> => {
     const company = companies.find((c) => c.id === id);
-    if (!company || !user) return;
+    if (!company || !user) return { success: false, emailSent: false };
 
     try {
+      // Optimistic update for immediate UI feedback
+      setCompanies((prev) => prev.map((c) => (c.id === id ? { ...c, status: "REVOKED" as const } : c)));
+
       const { error: updateError } = await supabase
         .from("companies")
         .update({ status: "REVOKED" })
         .eq("id", id)
         .eq("user_id", user.id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        // Rollback on error
+        setCompanies((prev) => prev.map((c) => (c.id === id ? { ...c, status: "ACTIVE" as const } : c)));
+        throw updateError;
+      }
 
-      await supabase
-        .from("history")
-        .insert({
-          user_id: user.id,
-          company_name: company.name,
-          action: "REVOKED",
-          data_types: company.dataTypes.map((dt) => dt.name)
-        });
+      const { error: historyError } = await supabase.from("history").insert({
+        user_id: user.id,
+        company_name: company.name,
+        action: "REVOKED",
+        data_types: company.dataTypes.map((dt) => dt.name),
+        reason: reason ?? null,
+      });
 
+      if (historyError) {
+        console.error("History insertion failed:", historyError.message);
+      }
+
+      // Fire GDPR Article 17 deletion request to the company's DPO
+      const userEmail = user.email ?? "unknown@user.com";
+      const { sent, to } = await sendGdprDeletionRequest({
+        companyName: company.name,
+        userEmail,
+        dataTypes: company.dataTypes.map((dt) => dt.name),
+        reason,
+        providedDpoEmail: company.policyReport?.dpoEmail,
+      });
+
+      return { success: true, emailSent: sent, emailTo: to };
     } catch (e) {
       console.error("Revocation failed", e);
+      return { success: false, emailSent: false };
+    }
+  };
+
+  const revokeAllHighRisk = async (reason?: string): Promise<{ count: number; emailsSent: number }> => {
+    if (!user) return { count: 0, emailsSent: 0 };
+    const targets = companies.filter((c) => c.risk === "HIGH" && c.status === "ACTIVE");
+    if (targets.length === 0) return { count: 0, emailsSent: 0 };
+
+    // Optimistic update for bulk action
+    setCompanies((prev) => 
+      prev.map((c) => (c.risk === "HIGH" && c.status === "ACTIVE" ? { ...c, status: "REVOKED" as const } : c))
+    );
+
+    const results = await Promise.all(targets.map((c) => revokeConsent(c.id, reason)));
+    return {
+      count: results.filter((r) => r.success).length,
+      emailsSent: results.filter((r) => r.emailSent).length,
+    };
+  };
+
+  const reconnectService = async (id: string): Promise<{ success: boolean }> => {
+    const company = companies.find((c) => c.id === id);
+    if (!company || !user) return { success: false };
+
+    try {
+      // Optimistic update
+      setCompanies((prev) => prev.map((c) => (c.id === id ? { ...c, status: "ACTIVE" as const } : c)));
+
+      const { error } = await supabase
+        .from("companies")
+        .update({ status: "ACTIVE" })
+        .eq("id", id)
+        .eq("user_id", user.id);
+
+      if (error) {
+        // Rollback
+        setCompanies((prev) => prev.map((c) => (c.id === id ? { ...c, status: "REVOKED" as const } : c)));
+        throw error;
+      }
+
+      await supabase.from("history").insert({
+        user_id: user.id,
+        company_name: company.name,
+        action: "GRANTED",
+        data_types: company.dataTypes.map((dt) => dt.name),
+      });
+
+      return { success: true };
+    } catch (e) {
+      console.error("Reconnect failed", e);
+      return { success: false };
     }
   };
 
@@ -193,7 +270,7 @@ export function ConsentProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <ConsentContext.Provider value={{ user, companies, history, revokeConsent, addHistoryEvent, syncExtensionEvents }}>
+    <ConsentContext.Provider value={{ user, companies, history, revokeConsent, revokeAllHighRisk, reconnectService, addHistoryEvent, syncExtensionEvents }}>
       {children}
     </ConsentContext.Provider>
   );

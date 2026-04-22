@@ -29,8 +29,10 @@ export interface ConsentEvent {
   userAction: "granted" | "cancelled" | "detected";
   userId?: string;
   synced: boolean;
-  privacyPolicyUrl?: string; // Appended if analyzed
-  plainSummary?: string;     // AI generated plain language summary
+  privacyPolicyUrl?: string;
+  plainSummary?: string;
+  sharedWith?: string[];
+  dpoEmail?: string;
 }
 
 export interface DBCompanyRecord {
@@ -47,6 +49,17 @@ export interface DBCompanyRecord {
   user_id: string;
   last_accessed?: string | null;
   purpose?: string | null;
+  policy_report?: {
+    summary: string;
+    keyFindings: {
+      category: "DATA_RETENTION" | "SHARING" | "RIGHTS" | "SECURITY";
+      finding: string;
+      impact: "POSITIVE" | "NEUTRAL" | "NEGATIVE";
+    }[];
+    lastAnalyzed: string;
+    policyUrl: string;
+    dpoEmail?: string;
+  } | null;
 }
 
 export interface DBHistoryRecord {

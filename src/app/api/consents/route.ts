@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { RiskLevel, ConsentStatus, CompanyRecord, DEMO_USER_ID } from "@/lib/constants";
 import { ConsentEvent } from "@/types/consent";
+import { calculateTrustScore } from "@/lib/privacy";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -47,10 +48,29 @@ export async function POST(req: NextRequest) {
         name: s.label,
         category: s.category || "PII"
       })),
-      shared_with: [],
+      shared_with: event.sharedWith ?? [],
       connected_at: event.detectedAt || new Date().toISOString(),
       description: event.plainSummary || `Detected via ${event.provider} OAuth flow from ${event.appDomain}`,
-      logo_uid: event.appDomain.split('.')[0].toLowerCase()
+      logo_uid: event.appDomain.split('.')[0].toLowerCase(),
+      // Persist the full AI analysis as a structured report
+      policy_report: event.plainSummary ? {
+        summary: event.plainSummary,
+        keyFindings: [
+          ...(event.sharedWith && event.sharedWith.length > 0 ? [{
+            category: "SHARING",
+            finding: `Data is shared with ${event.sharedWith.join(", ")}.`,
+            impact: "NEGATIVE" as const
+          }] : []),
+          ...event.scopesTranslated.slice(0, 3).map((s) => ({
+            category: "DATA_RETENTION" as const,
+            finding: `Collects: ${s.label}`,
+            impact: (s.risk === "HIGH" ? "NEGATIVE" : s.risk === "MEDIUM" ? "NEUTRAL" : "POSITIVE") as "NEGATIVE" | "NEUTRAL" | "POSITIVE"
+          }))
+        ],
+        lastAnalyzed: new Date().toISOString(),
+        policyUrl: event.privacyPolicyUrl || "#",
+        dpoEmail: event.dpoEmail
+      } : null
     };
 
     // 3. Persist to Supabase using Admin/Service Role client to bypass RLS
@@ -94,9 +114,72 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET() {
-  return NextResponse.json({ 
-    status: "healthy",
-    service: "Consently Sync Engine"
-  }, { headers: corsHeaders });
+export async function GET(req: NextRequest) {
+  try {
+    const searchParams = req.nextUrl.searchParams;
+    let userId = searchParams.get("userId");
+
+    if (!userId) {
+      return NextResponse.json({ error: "Missing userId" }, { status: 400, headers: corsHeaders });
+    }
+
+    const DEMO_IDS = ["demo-user-id", "11111111-1111-1111-1111-111111111111", "demo@consently.ai"];
+    if (DEMO_IDS.includes(userId)) {
+      userId = DEMO_USER_ID;
+    }
+
+    const includeDetails = searchParams.get("includeDetails") === "true";
+
+    // Query companies - query status for all if details requested, otherwise just active for score
+    const query = supabaseAdmin
+      .from("companies")
+      .select("*")
+      .eq("user_id", userId);
+    
+    if (!includeDetails) {
+      query.eq("status", "ACTIVE");
+    }
+
+    const { data: companies, error } = await query;
+
+    if (error) throw error;
+
+    const stats = {
+      high: 0,
+      medium: 0,
+      low: 0,
+      totalActive: 0
+    };
+
+    companies?.forEach(c => {
+      if (c.status === "ACTIVE") {
+        stats.totalActive++;
+        if (c.risk === "HIGH") stats.high++;
+        else if (c.risk === "MEDIUM") stats.medium++;
+        else if (c.risk === "LOW") stats.low++;
+      }
+    });
+
+    const score = calculateTrustScore(stats);
+
+    if (includeDetails) {
+      // Also fetch history
+      const { data: history, error: histError } = await supabaseAdmin
+        .from("history")
+        .select("*")
+        .eq("user_id", userId)
+        .order("timestamp", { ascending: false })
+        .limit(20);
+
+      if (histError) throw histError;
+
+      return NextResponse.json({ ...stats, score, companies, history }, { headers: corsHeaders });
+    }
+
+    return NextResponse.json({ ...stats, score }, { headers: corsHeaders });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Internal Server Error";
+    console.error("GET STATS ERROR:", error);
+    return NextResponse.json({ error: message }, { status: 500, headers: corsHeaders });
+  }
 }

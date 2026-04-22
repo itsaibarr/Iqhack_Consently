@@ -2,10 +2,22 @@ export type RiskLevel = "LOW" | "MEDIUM" | "HIGH";
 export type ConsentStatus = "ACTIVE" | "REVOKED" | "PENDING";
 
 export const RISK_CONFIG_MAP = {
-  HIGH: { color: "#F44336", label: "High Risk" },
-  MEDIUM: { color: "#FFC107", label: "Medium Risk" },
-  LOW: { color: "#00FF88", label: "Low Risk" },
+  HIGH: { color: "#EF4444", label: "High Risk" }, // Updated to Tailwind red-500
+  MEDIUM: { color: "#F59E0B", label: "Medium Risk" }, // Updated to Tailwind amber-400
+  LOW: { color: "#14A89C", label: "Low Risk" }, // Updated to Consently Teal
 };
+
+export interface PrivacyPolicyReport {
+  summary: string;
+  keyFindings: {
+    category: "DATA_RETENTION" | "SHARING" | "RIGHTS" | "SECURITY";
+    finding: string;
+    impact: "POSITIVE" | "NEUTRAL" | "NEGATIVE";
+  }[];
+  lastAnalyzed: string;
+  policyUrl: string;
+  dpoEmail?: string;
+}
 
 export interface CompanyRecord {
   id: string;
@@ -20,6 +32,7 @@ export interface CompanyRecord {
   purpose: string;      // "academic performance tracking", etc.
   description: string;
   logoUid: string;
+  policyReport?: PrivacyPolicyReport;
 }
 
 export interface ActivityRecord {

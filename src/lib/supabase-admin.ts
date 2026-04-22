@@ -10,8 +10,16 @@ export function getSupabaseAdmin(): SupabaseClient {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !key) {
-    throw new Error(
-      "Missing Supabase credentials. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env.local"
+    console.warn(
+      "Missing Supabase admin credentials. Supabase operations requiring admin access will fail."
+    );
+    // Use fallbacks to prevent crash
+    return createClient(
+      supabaseUrl || "https://placeholder-url.supabase.co",
+      key || "placeholder-key",
+      {
+        auth: { autoRefreshToken: false, persistSession: false },
+      }
     );
   }
 

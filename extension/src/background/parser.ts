@@ -20,7 +20,7 @@ export function parseOAuthUrl(urlStr: string, provider: OAuthProvider): ConsentE
         const rUrl = new URL(redirectUri);
         appDomain = rUrl.hostname;
       }
-    } catch (_e) {}
+    } catch {}
 
     // Split and normalize scopes
     const scopesRaw = scopeRaw ? scopeRaw.split(/[ +]/).filter(Boolean) : [];

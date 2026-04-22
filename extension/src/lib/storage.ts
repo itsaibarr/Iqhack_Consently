@@ -1,10 +1,24 @@
-import { ConsentEvent, ExtensionState } from "./types";
+import { ConsentEvent, ExtensionState, UserSettings } from "./types";
 
 const STORAGE_KEY = "consently_state";
 
+const DEFAULT_SETTINGS: UserSettings = {
+  stealth_mode: false,
+  notifications_enabled: true,
+  alert_frequency: "high_priority",
+  handshake_interval: 120,
+};
+
 export async function getState(): Promise<ExtensionState> {
   const result = await chrome.storage.local.get(STORAGE_KEY);
-  return result[STORAGE_KEY] ?? { events: [], lastSyncAt: null, userId: null, userEmail: null };
+  const state = result[STORAGE_KEY] ?? { events: [], lastSyncAt: null, userId: null, userEmail: null, settings: DEFAULT_SETTINGS };
+  
+  // Ensure settings are always present even in old state
+  if (!state.settings) {
+    state.settings = DEFAULT_SETTINGS;
+  }
+  
+  return state;
 }
 
 export async function saveState(state: ExtensionState): Promise<void> {
@@ -30,19 +44,32 @@ export async function updateEventAction(eventId: string, action: "granted" | "ca
   await saveState({ ...state, events });
 }
 
-/** Patches a stored event with real risk/summary data once policy analysis arrives. */
+export interface AnalysisPatch {
+  overallRisk: "LOW" | "MEDIUM" | "HIGH";
+  plainSummary: string;
+  privacyPolicyUrl?: string;
+  scopesTranslated?: ConsentEvent["scopesTranslated"];
+  sharedWith?: string[];
+  dpoEmail?: string;
+}
+
+/** Patches a stored event with full analysis data once policy analysis arrives. */
 export async function patchEventRisk(
   eventId: string,
-  overallRisk: "LOW" | "MEDIUM" | "HIGH",
-  plainSummary: string,
-  privacyPolicyUrl?: string,
+  patch: AnalysisPatch,
 ): Promise<void> {
   const state = await getState();
   const events = state.events.map(e =>
-    e.id === eventId
-      ? { ...e, overallRisk, plainSummary, privacyPolicyUrl, synced: false }
-      : e
+    e.id === eventId ? { ...e, ...patch, synced: false } : e
   );
   await saveState({ ...state, events });
 }
 
+/** Updates user settings in the state. */
+export async function updateSettings(settings: Partial<UserSettings>): Promise<void> {
+  const state = await getState();
+  await saveState({
+    ...state,
+    settings: { ...state.settings, ...settings },
+  });
+}

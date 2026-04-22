@@ -1,4 +1,5 @@
 import { ConsentEvent } from "../lib/types";
+import { getState } from "../lib/storage";
 
 /**
  * Responsibility: Detect when the user is viewing their Google Security permissions
@@ -7,6 +8,12 @@ import { ConsentEvent } from "../lib/types";
 export async function scoutGooglePermissions() {
   const currentUrl = window.location.href;
   
+  const state = await getState();
+  if (state.settings.stealth_mode) {
+    console.log("[Consently] Stealth Mode active: Suppression startup scout.");
+    return;
+  }
+
   if (!currentUrl.includes("myaccount.google.com/permissions")) {
     return;
   }

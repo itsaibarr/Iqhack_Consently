@@ -22,8 +22,17 @@ export interface ConsentEvent {
   userAction: "granted" | "cancelled" | "detected"; // "detected" if we can't confirm outcome
   userId?: string;        // Tied to dashboard user
   synced: boolean;        // false until API confirms receipt
-  privacyPolicyUrl?: string;  // Resolved policy URL, set when analysis succeeds
+  privacyPolicyUrl?: string;  // Policy page URL (the tab URL the user analyzed)
   plainSummary?: string;      // Plain-language summary from AI analysis
+  sharedWith?: string[];      // Third parties named in the privacy policy
+  dpoEmail?: string;          // DPO / privacy contact email extracted from the policy
+}
+
+export interface UserSettings {
+  stealth_mode: boolean;
+  notifications_enabled: boolean;
+  alert_frequency: "all" | "high_priority";
+  handshake_interval: number;
 }
 
 export interface ExtensionState {
@@ -31,6 +40,7 @@ export interface ExtensionState {
   lastSyncAt: string | null;
   userId: string | null;
   userEmail: string | null;
+  settings: UserSettings;
   handshakeComplete?: boolean;
   isDemoMode?: boolean;
 }

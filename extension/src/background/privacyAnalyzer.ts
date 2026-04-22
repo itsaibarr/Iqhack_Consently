@@ -27,6 +27,13 @@ const USER_PROMPT = (appName: string, policyText: string) =>
   `Analyze this privacy policy for "${appName}". Return ONLY this JSON structure:
 {"dataCollected":["list of data types collected"],"sharedWith":["list of third parties"],"userRights":["list of user rights"],"redFlag":"most concerning finding or null","plainSummary":"2-3 sentence plain English summary","riskVerdict":"LOW or MEDIUM or HIGH","dpoEmail":"data protection officer or privacy contact email address found in the policy, or null if not found"}
 
+Risk calibration rules:
+- Data collected for core service functionality (e.g. billing email, name for login) is LOW sensitivity even if collected in volume.
+- Sensitive data categories (biometric, health, financial profiling, precise location, full email inbox access) are HIGH regardless of company size.
+- Well-known, regulated companies (Google, Apple, Microsoft, Anthropic, GitHub, Stripe, Meta, Slack, Spotify, Notion, Figma, etc.) have established privacy programs — weigh their data collection as LOWER risk than the same data from an unknown startup.
+- Consider both WHAT is collected AND the company's accountability level. An email address from Anthropic is LOW; biometric data from any company is HIGH.
+- Only assign HIGH riskVerdict if the data profile is genuinely invasive (multiple sensitive categories, broad sharing, or profiling without clear consent).
+
 Policy text:
 ${policyText}`;
 
@@ -98,10 +105,19 @@ function buildFallback(appName: string, pageText: string): PolicyAnalysis {
   ];
   const sharedWith = thirdParties.filter(tp => lower.includes(tp.toLowerCase()));
 
-  const hasFinancial = lower.includes("payment") || lower.includes("credit card");
+  // Fallback risk: only truly sensitive categories trigger HIGH
   const hasHealth = lower.includes("health") || lower.includes("medical");
+  const hasBiometric = lower.includes("biometric") || lower.includes("fingerprint");
+  const hasPreciseLocation = lower.includes("precise location") || lower.includes("gps tracking");
+  const hasFullEmailAccess = lower.includes("read all") && lower.includes("email");
   const riskVerdict: PolicyAnalysis["riskVerdict"] =
-    hasFinancial || hasHealth ? "HIGH" : dataCollected.length > 5 ? "MEDIUM" : "LOW";
+    hasHealth || hasBiometric || hasPreciseLocation || hasFullEmailAccess
+      ? "HIGH"
+      : dataCollected.length > 7
+        ? "MEDIUM"
+        : dataCollected.length > 3
+          ? "MEDIUM"
+          : "LOW";
 
   return {
     appName,

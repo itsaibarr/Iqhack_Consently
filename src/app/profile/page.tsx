@@ -30,16 +30,7 @@ export default function ProfilePage() {
   const revokedConsents = companies.filter(c => c.status === "REVOKED").length;
 
   // Unified trust score logic
-  const trustScore = useMemo(() => {
-    const active = companies.filter(c => c.status === "ACTIVE");
-    const stats = {
-      high: active.filter(c => c.risk === "HIGH").length,
-      medium: active.filter(c => c.risk === "MEDIUM").length,
-      low: active.filter(c => c.risk === "LOW").length,
-    };
-    
-    return calculateTrustScore(stats);
-  }, [companies]);
+  const trustScore = useMemo(() => calculateTrustScore(companies), [companies]);
 
   const highRiskServices = useMemo(() => 
     companies.filter(c => c.risk === "HIGH" && c.status === "ACTIVE"),

@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { CompanyRecord, ActivityRecord, DEMO_USER_ID } from "@/lib/constants";
+import { computeServiceScore, scoreToRiskLevel } from "@/lib/privacy";
 
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -21,21 +22,27 @@ interface ConsentContextType {
 
 const ConsentContext = createContext<ConsentContextType | undefined>(undefined);
 
-const mapCompany = (raw: DBCompanyRecord): CompanyRecord => ({
-  id: raw.id,
-  name: raw.name,
-  category: raw.category,
-  risk: raw.risk,
-  status: raw.status,
-  dataTypes: raw.data_types || [],
-  sharedWith: raw.shared_with || [],
-  connectedAt: raw.connected_at,
-  description: raw.description || "",
-  logoUid: raw.logo_uid || "",
-  lastAccessed: raw.last_accessed || "Never",
-  purpose: raw.purpose || "Service functionality",
-  policyReport: raw.policy_report ?? undefined
-});
+const mapCompany = (raw: DBCompanyRecord): CompanyRecord => {
+  const base: CompanyRecord = {
+    id: raw.id,
+    name: raw.name,
+    category: raw.category,
+    risk: raw.risk,
+    status: raw.status,
+    dataTypes: raw.data_types || [],
+    sharedWith: raw.shared_with || [],
+    connectedAt: raw.connected_at,
+    description: raw.description || "",
+    logoUid: raw.logo_uid || "",
+    lastAccessed: raw.last_accessed || "Never",
+    purpose: raw.purpose || "Service functionality",
+    policyReport: raw.policy_report ?? undefined,
+  };
+  // Override stored risk with dynamically computed value so existing
+  // records immediately reflect the improved scoring algorithm.
+  base.risk = scoreToRiskLevel(computeServiceScore(base));
+  return base;
+};
 
 const mapHistory = (raw: DBHistoryRecord): ActivityRecord => ({
   id: raw.id,

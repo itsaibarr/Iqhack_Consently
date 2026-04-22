@@ -54,7 +54,7 @@ export function parseOAuthUrl(urlStr: string, provider: OAuthProvider): ConsentE
       return null;
     }
     
-    const overallRisk = computeOverallRisk(scopesTranslated);
+    const overallRisk = computeOverallRisk(scopesTranslated, appDomain);
 
     return {
       id: crypto.randomUUID(),

@@ -160,7 +160,22 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    const score = calculateTrustScore(stats);
+    const mappedCompanies: CompanyRecord[] = (companies ?? []).map(c => ({
+      id: c.id,
+      name: c.name,
+      category: c.category as CompanyRecord["category"],
+      risk: c.risk as RiskLevel,
+      status: c.status as ConsentStatus,
+      dataTypes: c.data_types || [],
+      sharedWith: c.shared_with || [],
+      connectedAt: c.connected_at,
+      lastAccessed: c.last_accessed || "Never",
+      purpose: c.purpose || "",
+      description: c.description || "",
+      logoUid: c.logo_uid || "",
+    }));
+
+    const score = calculateTrustScore(mappedCompanies);
 
     if (includeDetails) {
       // Also fetch history

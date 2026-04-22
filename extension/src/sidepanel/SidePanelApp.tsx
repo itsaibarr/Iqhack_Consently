@@ -171,7 +171,7 @@ export default function SidePanelApp() {
       {view === "dashboard" && (
         <footer className="border-t border-neutral-100 bg-white px-4 py-3">
           <button
-            onClick={() => window.open(import.meta.env.VITE_DASHBOARD_URL || "http://localhost:3000")}
+            onClick={() => window.open(import.meta.env.VITE_DASHBOARD_URL || "https://consently.vercel.app")}
             className="btn-primary w-full text-sm shadow-sm"
           >
             Open Dashboard
@@ -535,7 +535,7 @@ function LinkView({ onLinked }: { onLinked: () => void }) {
       </div>
       <button
         onClick={() => {
-          window.open(import.meta.env.VITE_DASHBOARD_URL || "http://localhost:3000");
+          window.open(import.meta.env.VITE_DASHBOARD_URL || "https://consently.vercel.app");
           // Poll for auth completion
           const interval = setInterval(async () => {
             const data = await getState();

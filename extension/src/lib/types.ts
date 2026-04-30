@@ -40,6 +40,7 @@ export interface ExtensionState {
   lastSyncAt: string | null;
   userId: string | null;
   userEmail: string | null;
+  accessToken: string | null;
   settings: UserSettings;
   handshakeComplete?: boolean;
   isDemoMode?: boolean;

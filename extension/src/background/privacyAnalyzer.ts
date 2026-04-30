@@ -18,24 +18,6 @@ export interface PolicyAnalysis {
   privacyPolicyUrl?: string;
 }
 
-const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
-const OPENROUTER_MODEL = "nvidia/nemotron-3-super-120b-a12b:free";
-
-const SYSTEM_PROMPT = `You are a privacy policy JSON extractor. You MUST respond with ONLY a raw JSON object. No prose, no markdown, no explanation, no code fences. Your entire response must start with { and end with }.`;
-
-const USER_PROMPT = (appName: string, policyText: string) =>
-  `Analyze this privacy policy for "${appName}". Return ONLY this JSON structure:
-{"dataCollected":["list of data types collected"],"sharedWith":["list of third parties"],"userRights":["list of user rights"],"redFlag":"most concerning finding or null","plainSummary":"2-3 sentence plain English summary","riskVerdict":"LOW or MEDIUM or HIGH","dpoEmail":"data protection officer or privacy contact email address found in the policy, or null if not found"}
-
-Risk calibration rules:
-- Data collected for core service functionality (e.g. billing email, name for login) is LOW sensitivity even if collected in volume.
-- Sensitive data categories (biometric, health, financial profiling, precise location, full email inbox access) are HIGH regardless of company size.
-- Well-known, regulated companies (Google, Apple, Microsoft, Anthropic, GitHub, Stripe, Meta, Slack, Spotify, Notion, Figma, etc.) have established privacy programs — weigh their data collection as LOWER risk than the same data from an unknown startup.
-- Consider both WHAT is collected AND the company's accountability level. An email address from Anthropic is LOW; biometric data from any company is HIGH.
-- Only assign HIGH riskVerdict if the data profile is genuinely invasive (multiple sensitive categories, broad sharing, or profiling without clear consent).
-
-Policy text:
-${policyText}`;
 
 // ---------------------------------------------------------------------------
 // JSON extraction — handles models that wrap JSON in prose
@@ -140,71 +122,37 @@ export async function analyzePageText(
   pageText: string,
   appName: string,
 ): Promise<PolicyAnalysis | null> {
-  const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
-
-  if (!apiKey) {
-    console.warn("[Consently] No OpenRouter API key — using fallback analysis");
-    return pageText.length >= 200 ? buildFallback(appName, pageText) : null;
-  }
-
   if (!pageText || pageText.length < 200) {
     console.warn("[Consently] Page text too short — not a privacy policy page?");
     return null;
   }
 
-  console.log(`[Consently] Analyzing ${pageText.length} chars with OpenRouter for ${appName}...`);
+  const dashboardUrl = import.meta.env.VITE_DASHBOARD_URL || "https://consently.vercel.app";
+  const proxyUrl = `${dashboardUrl}/api/analyze`;
+
+  console.log(`[Consently] Analyzing ${pageText.length} chars via dashboard proxy for ${appName}...`);
 
   try {
-    const res = await fetch(OPENROUTER_API_URL, {
+    const res = await fetch(proxyUrl, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-        "HTTP-Referer": "https://consently-app.vercel.app",
-        "X-Title": "Consently",
-      },
-      signal: AbortSignal.timeout(30000),
-      body: JSON.stringify({
-        model: OPENROUTER_MODEL,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: USER_PROMPT(appName, pageText) },
-        ],
-        temperature: 0.1,
-        max_tokens: 600,
-      }),
+      headers: { "Content-Type": "application/json" },
+      signal: AbortSignal.timeout(35000),
+      body: JSON.stringify({ pageText, appName }),
     });
 
-    if (!res.ok) {
-      console.error("[Consently] OpenRouter API error:", res.status, await res.text());
-      return buildFallback(appName, pageText);
+    if (res.ok) {
+      const analysis = await res.json() as PolicyAnalysis;
+      if (analysis.dataCollected && analysis.riskVerdict) {
+        return { ...analysis, appName };
+      }
     }
 
-    const data = await res.json();
-    const rawText: string = data?.choices?.[0]?.message?.content ?? "";
-
-    console.log("[Consently] Raw AI response (first 300):", rawText.slice(0, 300));
-
-    const parsed = extractJson(rawText);
-
-    if (parsed && parsed.dataCollected && parsed.riskVerdict) {
-      return {
-        dataCollected: parsed.dataCollected as string[],
-        sharedWith: (parsed.sharedWith as string[]) || [],
-        userRights: (parsed.userRights as string[]) || [],
-        redFlag: (parsed.redFlag as string) || null,
-        plainSummary: (parsed.plainSummary as string) || `${appName} privacy policy analyzed.`,
-        riskVerdict: parsed.riskVerdict as PolicyAnalysis["riskVerdict"],
-        dpoEmail: (parsed.dpoEmail as string) || extractEmailFromText(pageText),
-        appName,
-        source: "ai",
-      };
+    if (!res.ok && res.status !== 503) {
+      console.error("[Consently] Dashboard proxy error:", res.status, await res.text().catch(() => ""));
     }
-
-    console.warn("[Consently] AI response did not contain valid structure, using fallback");
-    return buildFallback(appName, pageText);
   } catch (err) {
-    console.error("[Consently] OpenRouter error:", err);
-    return buildFallback(appName, pageText);
+    console.warn("[Consently] Dashboard proxy unreachable — using keyword fallback:", err);
   }
+
+  return buildFallback(appName, pageText);
 }

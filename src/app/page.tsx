@@ -14,6 +14,7 @@ import Link from "next/link";
 import { SummaryCard } from "@/components/ui/SummaryCard";
 import { LegendItem } from "@/components/ui/LegendItem";
 import { OnboardingFlow } from "@/components/ui/OnboardingFlow";
+import { ConnectServiceModal } from "@/components/consent/ConnectServiceModal";
 
 import { useConsent } from "@/context/ConsentContext";
 
@@ -23,12 +24,20 @@ export default function Home() {
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
+  const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
 
   // null = closed, string id = single revoke, "bulk" = revoke all high risk
   const [pendingRevokeId, setPendingRevokeId] = useState<string | "bulk" | null>(null);
   const [isRevoking, setIsRevoking] = useState(false);
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      if (searchParams.get("reset") === "1") {
+        localStorage.removeItem("consently_onboarding_done");
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
     const isDone = localStorage.getItem("consently_onboarding_done");
     setTimeout(() => {
       setShowOnboarding(!isDone);
@@ -149,7 +158,10 @@ export default function Home() {
                     </motion.div>
 
                     <div className="flex gap-4">
-                      <button className="btn-ghost flex h-11 items-center gap-2 px-6">
+                      <button 
+                        onClick={() => setIsConnectModalOpen(true)}
+                        className="btn-ghost flex h-11 items-center gap-2 px-6"
+                      >
                         <Plus size={16} />
                         Connect Service
                       </button>
@@ -279,6 +291,14 @@ export default function Home() {
           isLoading={isRevoking}
         />
       ) : null}
+
+      <ConnectServiceModal 
+        isOpen={isConnectModalOpen}
+        onClose={() => setIsConnectModalOpen(false)}
+        onConnect={(name) => {
+          showToast(`Connected to ${name} successfully.`, "success");
+        }}
+      />
 
       <ToastContainer toasts={toasts} dismiss={dismiss} />
     </>

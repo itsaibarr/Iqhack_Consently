@@ -11,7 +11,8 @@ import { ServiceDetailView } from "@/components/consent/ServiceDetailView";
 import { RevokeConfirmModal } from "@/components/consent/RevokeConfirmModal";
 import { ToastContainer, useToast } from "@/components/ui/Toast";
 import { useConsent } from "@/context/ConsentContext";
-import { Globe, Info, Activity } from "lucide-react";
+import { Globe, Info, Activity, Plus } from "lucide-react";
+import { ConnectServiceModal } from "@/components/consent/ConnectServiceModal";
 
 export default function MapPage() {
   const { companies, revokeConsent, revokeAllHighRisk, reconnectService } = useConsent();
@@ -20,6 +21,7 @@ export default function MapPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pendingRevokeId, setPendingRevokeId] = useState<string | "bulk" | null>(null);
   const [isRevoking, setIsRevoking] = useState(false);
+  const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
 
   const activeCompanies = companies.filter((c) => c.status === "ACTIVE");
   const highRiskCount = companies.filter((c) => c.risk === "HIGH" && c.status === "ACTIVE").length;
@@ -117,9 +119,9 @@ export default function MapPage() {
 
                 <div className="flex flex-col items-end">
                   <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-tighter">System Status</span>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2" title="We are actively monitoring for new data requests.">
                     <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-label-md font-bold text-neutral-900">Handshake Active</span>
+                    <span className="text-label-md font-bold text-neutral-900">Watching for new requests</span>
                   </div>
                 </div>
               </div>
@@ -131,53 +133,74 @@ export default function MapPage() {
           <div className="flex flex-col gap-8">
             {/* Immersive Graph */}
             <div className="relative group">
-              <NodeGraph
-                companies={companies}
-                onNodeClick={(id) => setSelectedId(id)}
-                className="h-[600px] lg:h-[750px]"
-              />
-
-              {/* Overlay Dashboard */}
-              <div className="absolute bottom-8 left-8 right-8 z-10 pointer-events-none">
-                <div className="flex flex-wrap items-end justify-between gap-4">
-                  {/* Legend */}
-                  <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="pointer-events-auto rounded-[var(--radius-lg)] border border-neutral-100 bg-white/80 p-6 backdrop-blur-md shadow-lg"
-                  >
-                    <h4 className="text-label-sm text-neutral-400 mb-4 flex items-center gap-2">
-                      <Info size={14} />
-                      Map Legend
-                    </h4>
-                    <div className="space-y-4">
-                      <LegendItem color="var(--color-risk-red-500)" label="High Risk Service" />
-                      <LegendItem color="var(--color-primary-500)" label="You (Identity Core)" />
-                      <LegendItem color="var(--color-neutral-200)" label="Passive Connection" animate />
-                    </div>
-                  </motion.div>
-
-                  {/* Quick Stats */}
-                  <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="pointer-events-auto flex gap-4"
-                  >
-                    <SummaryCard
-                      label="Connected Companies"
-                      value={activeCompanies.length}
-                      detail="Total entities"
-                      className="w-40 border-none shadow-xl"
-                    />
-                    <SummaryCard
-                      label="Data Requests"
-                      value={<Activity size={24} className="text-[var(--color-primary-500)]" />}
-                      detail="Real-time access"
-                      className="w-40 border-none shadow-xl"
-                    />
-                  </motion.div>
+              {activeCompanies.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-[600px] lg:h-[750px] w-full rounded-3xl border border-neutral-100 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                   <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[var(--color-primary-50)] text-[var(--color-primary-500)] mb-6">
+                     <Globe size={32} />
+                   </div>
+                   <h3 className="text-h3 text-neutral-900 mb-3">No active connections found</h3>
+                   <p className="text-body-md text-neutral-500 text-center max-w-sm mb-8">
+                     Your privacy map is currently empty. Connect your first service to start tracking your digital footprint.
+                   </p>
+                   <button 
+                     onClick={() => setIsConnectModalOpen(true)}
+                     className="btn-primary flex h-11 items-center gap-2 px-6 shadow-sm hover:shadow-md transition-shadow"
+                   >
+                     <Plus size={16} />
+                     Add your first service
+                   </button>
                 </div>
-              </div>
+              ) : (
+                <>
+                  <NodeGraph
+                    companies={companies}
+                    onNodeClick={(id) => setSelectedId(id)}
+                    className="h-[600px] lg:h-[750px]"
+                  />
+
+                  {/* Overlay Dashboard */}
+                  <div className="absolute bottom-8 left-8 right-8 z-10 pointer-events-none">
+                    <div className="flex flex-wrap items-end justify-between gap-4">
+                      {/* Legend */}
+                      <motion.div
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="pointer-events-auto rounded-[var(--radius-lg)] border border-neutral-100 bg-white/80 p-6 backdrop-blur-md shadow-lg"
+                      >
+                        <h4 className="text-label-sm text-neutral-400 mb-4 flex items-center gap-2">
+                          <Info size={14} />
+                          Map Legend
+                        </h4>
+                        <div className="space-y-4">
+                          <LegendItem color="var(--color-risk-red-500)" label="High Risk Service" />
+                          <LegendItem color="var(--color-primary-500)" label="You (Identity Core)" />
+                          <LegendItem color="var(--color-neutral-200)" label="Passive Connection" animate />
+                        </div>
+                      </motion.div>
+
+                      {/* Quick Stats */}
+                      <motion.div
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="pointer-events-auto flex gap-4"
+                      >
+                        <SummaryCard
+                          label="Connected Companies"
+                          value={activeCompanies.length}
+                          detail="Total entities"
+                          className="w-40 border-none shadow-xl"
+                        />
+                        <SummaryCard
+                          label="Data Requests"
+                          value={<Activity size={24} className="text-[var(--color-primary-500)]" />}
+                          detail="Real-time access"
+                          className="w-40 border-none shadow-xl"
+                        />
+                      </motion.div>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Information Section */}
@@ -236,6 +259,14 @@ export default function MapPage() {
           isLoading={isRevoking}
         />
       ) : null}
+
+      <ConnectServiceModal 
+        isOpen={isConnectModalOpen}
+        onClose={() => setIsConnectModalOpen(false)}
+        onConnect={(name) => {
+          showToast(`Connected to ${name} successfully.`, "success");
+        }}
+      />
 
       <ToastContainer toasts={toasts} dismiss={dismiss} />
     </>

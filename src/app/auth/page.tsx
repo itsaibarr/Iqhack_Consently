@@ -11,7 +11,7 @@ declare const chrome: {
   runtime: {
     sendMessage: (
       extensionId: string,
-      message: { type: string; userId: string; userEmail: string },
+      message: { type: string; userId: string; userEmail: string; accessToken?: string },
       callback: (response: { success?: boolean } | undefined) => void
     ) => void;
     lastError?: { message?: string };
@@ -29,15 +29,15 @@ export default function AuthPage() {
   const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "complete" | "failed">("idle");
 
   // Sync session with extension upon successful auth
-  const syncWithExtension = (userId: string, userEmail: string): Promise<boolean> => {
+  const syncWithExtension = (userId: string, userEmail: string, accessToken?: string): Promise<boolean> => {
     return new Promise((resolve) => {
       setSyncStatus("syncing");
-      
+
       if (typeof chrome !== "undefined" && chrome.runtime?.sendMessage) {
         try {
           chrome.runtime.sendMessage(
-            EXTENSION_ID, 
-            { type: "AUTH_SUCCESS", userId, userEmail },
+            EXTENSION_ID,
+            { type: "AUTH_SUCCESS", userId, userEmail, accessToken },
             (response: { success?: boolean } | undefined) => {
               if (chrome.runtime.lastError) {
                 console.warn("[Consently] Extension sync failed (ID might be wrong):", chrome.runtime.lastError);
@@ -100,8 +100,9 @@ export default function AuthPage() {
 
       if (data.user) {
         document.cookie = "consently_demo_mode=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-        
-        const success = await syncWithExtension(data.user.id, data.user.email!);
+
+        const accessToken = data.session?.access_token;
+        const success = await syncWithExtension(data.user.id, data.user.email!, accessToken);
         
         // Ensure feedback is visible before navigation
         setTimeout(() => {

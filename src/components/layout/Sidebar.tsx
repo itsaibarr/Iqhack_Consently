@@ -1,14 +1,15 @@
 "use client";
 
-import { LayoutGrid, History, Shield, Settings, Zap, LogOut, MoreHorizontal, Globe, User as UserIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { LayoutGrid, History, Shield, Settings, Zap, LogOut, MoreHorizontal, Globe, User as UserIcon, ChevronLeft, ChevronRight, PuzzleIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { useConsent } from "@/context/ConsentContext";
 import { signOut } from "@/actions/auth";
+import { EXTENSION_ID } from "@/lib/constants";
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -31,6 +32,33 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
   const pathname = usePathname();
   const { user } = useConsent();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [extensionInstalled, setExtensionInstalled] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const win = window as unknown as {
+      chrome?: {
+        runtime?: {
+          sendMessage: (id: string, msg: object, cb: (r: unknown) => void) => void;
+          lastError?: unknown;
+        };
+      };
+    };
+
+    if (!win.chrome?.runtime?.sendMessage) {
+      setExtensionInstalled(false);
+      return;
+    }
+
+    try {
+      win.chrome.runtime.sendMessage(EXTENSION_ID, { type: "PING" }, () => {
+        setExtensionInstalled(!win.chrome?.runtime?.lastError);
+      });
+    } catch {
+      setExtensionInstalled(false);
+    }
+  }, []);
 
   return (
     <motion.aside 
@@ -77,6 +105,8 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
               <Link
                 key={item.name}
                 href={item.href}
+                aria-label={item.name}
+                aria-current={isActive ? "page" : undefined}
                 title={isCollapsed ? item.name : undefined}
                 className={cn(
                   "flex h-10 items-center rounded-[var(--radius-md)] text-[13px] font-semibold transition-all",
@@ -95,6 +125,27 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
             );
           })}
         </nav>
+
+        {/* Extension install CTA */}
+        {extensionInstalled === false && !isCollapsed && (
+          <div className="mb-4 rounded-[var(--radius-md)] border border-[var(--color-primary-100)] bg-[var(--color-primary-50)] p-3">
+            <div className="flex items-center gap-2 mb-1.5">
+              <PuzzleIcon size={14} className="text-[var(--color-primary-500)]" />
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--color-primary-700)]">Extension Not Found</span>
+            </div>
+            <p className="text-[11px] text-[var(--color-primary-600)] leading-relaxed mb-2">
+              Install the browser extension to detect OAuth flows and analyze privacy policies in real time.
+            </p>
+            <a
+              href="https://chromewebstore.google.com/detail/consently/kegngnalimkofmfaeefinlljgdhomgon"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full text-center rounded-[var(--radius-sm)] bg-[var(--color-primary-500)] px-3 py-1.5 text-[11px] font-bold text-white hover:bg-[var(--color-primary-600)] transition-colors"
+            >
+              Install Extension
+            </a>
+          </div>
+        )}
 
         {/* Bottom Section */}
         <div className="mt-auto pt-6 border-t border-[var(--border-subtle)]">

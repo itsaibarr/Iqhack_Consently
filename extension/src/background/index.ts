@@ -257,6 +257,11 @@ chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => 
     return;
   }
 
+  if (message.type === "PING") {
+    sendResponse({ installed: true });
+    return;
+  }
+
   if (message.type === "AUTH_SUCCESS") {
     (async () => {
       try {
@@ -265,6 +270,7 @@ chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => 
           ...state,
           userId: message.userId,
           userEmail: message.userEmail || state.userEmail,
+          accessToken: message.accessToken || state.accessToken,
           handshakeComplete: true,
         });
 

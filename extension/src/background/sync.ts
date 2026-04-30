@@ -8,17 +8,22 @@ const API_BASE = import.meta.env.VITE_DASHBOARD_URL || "https://consently.vercel
 export async function syncEvent(event: ConsentEvent): Promise<boolean> {
   const state = await getState();
   const userId = event.userId || state.userId;
-  
+
   if (!userId) {
     console.warn(`[Consently] Skipping sync for ${event.appName}: No userId found`);
     return false;
+  }
+
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (state.accessToken) {
+    headers["Authorization"] = `Bearer ${state.accessToken}`;
   }
 
   console.debug(`[Consently] Syncing event for ${event.appName} to ${API_BASE}...`);
   try {
     const res = await fetch(`${API_BASE}/api/consents`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({ ...event, userId }),
     });
     
@@ -56,9 +61,14 @@ export async function fetchUserSettings(): Promise<void> {
   const state = await getState();
   if (!state.userId) return;
 
+  const headers: Record<string, string> = {};
+  if (state.accessToken) {
+    headers["Authorization"] = `Bearer ${state.accessToken}`;
+  }
+
   console.log("[Consently] Fetching latest user settings...");
   try {
-    const res = await fetch(`${API_BASE}/api/settings?userId=${state.userId}`);
+    const res = await fetch(`${API_BASE}/api/settings?userId=${state.userId}`, { headers });
     if (res.ok) {
       const settings = await res.json();
       await updateSettings(settings);

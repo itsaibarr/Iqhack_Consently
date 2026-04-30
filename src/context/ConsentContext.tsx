@@ -197,7 +197,12 @@ export function ConsentProvider({ children }: { children: ReactNode }) {
         console.error("History insertion failed:", historyError.message);
       }
 
-      // Fire GDPR Article 17 deletion request to the company's DPO
+      // Fire GDPR Article 17 deletion request — skip for demo users to prevent real emails on mock data
+      const isDemoUser = getIsDemoMode() || user.id === DEMO_USER_ID || user.email === "demo@consently.ai";
+      if (isDemoUser) {
+        return { success: true, emailSent: false, emailTo: undefined };
+      }
+
       const userEmail = user.email ?? "unknown@user.com";
       const { sent, to } = await sendGdprDeletionRequest({
         companyName: company.name,

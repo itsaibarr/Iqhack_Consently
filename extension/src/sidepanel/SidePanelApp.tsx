@@ -22,6 +22,7 @@ interface AnalysisState {
   event: ConsentEvent;
   analysis: PolicyAnalysis | null;
   domain: string;
+  truncated?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -84,13 +85,14 @@ export default function SidePanelApp() {
         domain: string;
         event?: ConsentEvent;
         analysis?: PolicyAnalysis;
+        truncated?: boolean;
       };
 
       if (state.status === "analyzing" && state.event) {
         setAnalysisState({ event: state.event, analysis: null, domain: state.domain });
         setView("analyzing");
       } else if (state.status === "ready" && state.analysis && state.event) {
-        setAnalysisState({ event: state.event, analysis: state.analysis, domain: state.domain });
+        setAnalysisState({ event: state.event, analysis: state.analysis, domain: state.domain, truncated: state.truncated });
         setView("analysis");
       } else if (state.status === "failed") {
         setErrorDomain(state.domain);
@@ -159,6 +161,7 @@ export default function SidePanelApp() {
           <AnalysisView
             analysis={analysisState.analysis}
             event={analysisState.event}
+            truncated={analysisState.truncated}
             onSave={handleSave}
             onDiscard={handleDiscard}
           />
@@ -369,10 +372,11 @@ function AnalyzingView({ domain }: { domain: string }) {
 // ---------------------------------------------------------------------------
 
 function AnalysisView({
-  analysis, event, onSave, onDiscard,
+  analysis, event, truncated, onSave, onDiscard,
 }: {
   analysis: PolicyAnalysis;
   event: ConsentEvent;
+  truncated?: boolean;
   onSave: () => void;
   onDiscard: () => void;
 }) {
@@ -405,6 +409,16 @@ function AnalysisView({
       </div>
 
       <div className="space-y-4 p-4 pb-24">
+        {/* Truncation warning */}
+        {truncated && (
+          <div className="flex items-start gap-3 rounded-xl border border-amber-100 bg-amber-50 p-3.5">
+            <AlertTriangle size={16} className="mt-0.5 flex-shrink-0 text-amber-500" />
+            <p className="text-xs leading-relaxed text-amber-800">
+              This page is long — only the first 8,000 characters were analysed. Some policy clauses may be missing.
+            </p>
+          </div>
+        )}
+
         {/* Red flag */}
         {analysis.redFlag && (
           <div className="flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 p-3.5">

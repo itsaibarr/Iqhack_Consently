@@ -38,6 +38,7 @@ function setAnalysisState(state: {
   domain: string;
   event?: ConsentEvent;
   analysis?: unknown;
+  truncated?: boolean;
 }): void {
   chrome.storage.session.set({ consently_analysis: state }).catch(err =>
     console.warn("[Consently] Failed to write analysis state to session storage:", err)
@@ -63,7 +64,7 @@ chrome.action.onClicked.addListener((tab) => {
 chrome.runtime.onInstalled.addListener(() => {
   if (chrome.storage.session) {
     chrome.storage.session.setAccessLevel({
-      accessLevel: "TRUSTED_AND_UNTRUSTED_CONTEXTS",
+      accessLevel: "TRUSTED_CONTEXTS",
     }).catch(err => console.error("[Consently] Failed to set session storage access level", err));
   }
 });
@@ -115,18 +116,25 @@ async function handleAnalyzeCurrentPage(callerTabId?: number) {
 
   // 1. Get page text from content script (live DOM — no CORS, no fetch)
   let pageText: string | null = null;
+  let pageTruncated = false;
   try {
     const response = await chrome.tabs.sendMessage(tabId, { type: "GET_PAGE_TEXT" });
     pageText = response?.text ?? null;
+    pageTruncated = response?.truncated ?? false;
   } catch (err) {
     // Content script may not be injected — inject it dynamically
     console.warn("[Consently] Content script not ready, injecting dynamically:", err);
     try {
       await chrome.scripting.executeScript({
         target: { tabId },
-        func: () => document.body.innerText.slice(0, 8000),
+        func: () => {
+          const full = document.body.innerText;
+          return { text: full.slice(0, 8000), truncated: full.length > 8000 };
+        },
       }).then(results => {
-        pageText = results?.[0]?.result ?? null;
+        const r = results?.[0]?.result as { text: string; truncated: boolean } | null;
+        pageText = r?.text ?? null;
+        pageTruncated = r?.truncated ?? false;
       });
     } catch (injectErr) {
       console.error("[Consently] Dynamic injection also failed:", injectErr);
@@ -178,7 +186,7 @@ async function handleAnalyzeCurrentPage(callerTabId?: number) {
   });
 
   // 6. Push findings to side panel via session storage — user reviews before anything is sent
-  setAnalysisState({ status: "ready", analysis, event, domain });
+  setAnalysisState({ status: "ready", analysis, event, domain, truncated: pageTruncated });
 
   const badgeColor = analysis.riskVerdict === "HIGH" ? "#EF4444"
     : analysis.riskVerdict === "MEDIUM" ? "#F59E0B"
@@ -239,8 +247,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // ---------------------------------------------------------------------------
 
 chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
-  const TRUSTED_ORIGINS = ["localhost:3000", "consently.vercel.app", "consently-itsaibarrs-projects.vercel.app", "consently-git-main-itsaibarrs-projects.vercel.app"];
-  if (sender.url && !TRUSTED_ORIGINS.some(o => sender.url!.includes(o))) {
+  const TRUSTED_HOSTNAMES = new Set(["localhost", "consently.vercel.app", "consently-itsaibarrs-projects.vercel.app", "consently-git-main-itsaibarrs-projects.vercel.app"]);
+  let senderHostname: string | null = null;
+  try {
+    senderHostname = sender.url ? new URL(sender.url).hostname : null;
+  } catch { /* invalid URL */ }
+  if (!senderHostname || !TRUSTED_HOSTNAMES.has(senderHostname)) {
     console.warn("[Consently] Rejected external message from untrusted origin:", sender.url);
     return;
   }

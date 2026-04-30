@@ -7,7 +7,9 @@ import { scoutGooglePermissions } from "../background/scout";
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === "GET_PAGE_TEXT") {
-    sendResponse({ text: document.body.innerText.slice(0, 8000) });
+    const full = document.body.innerText;
+    const text = full.slice(0, 8000);
+    sendResponse({ text, truncated: full.length > 8000 });
     return true;
   }
 });

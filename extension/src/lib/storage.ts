@@ -11,7 +11,7 @@ const DEFAULT_SETTINGS: UserSettings = {
 
 export async function getState(): Promise<ExtensionState> {
   const result = await chrome.storage.local.get(STORAGE_KEY);
-  const state = result[STORAGE_KEY] ?? { events: [], lastSyncAt: null, userId: null, userEmail: null, settings: DEFAULT_SETTINGS };
+  const state = result[STORAGE_KEY] ?? { events: [], lastSyncAt: null, userId: null, userEmail: null, accessToken: null, settings: DEFAULT_SETTINGS };
   
   // Ensure settings are always present even in old state
   if (!state.settings) {

@@ -23,13 +23,17 @@ export default function PopupApp() {
   const [hasSync, setHasSync] = useState(false);
   const [pulses, setPulses] = useState<ConsentPulse[]>([]);
   const [score, setScore] = useState(88);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
 
 
   const handleAnalyzePage = useCallback(() => {
+    setIsAnalyzing(true);
     // Fire-and-forget — background acknowledges immediately, result appears as sidebar on the page
     chrome.runtime.sendMessage({ type: "ANALYZE_CURRENT_PAGE" });
-    window.close();
+    setTimeout(() => {
+      window.close();
+    }, 1500);
   }, []);
 
   const refreshState = useCallback(async () => {
@@ -70,7 +74,7 @@ export default function PopupApp() {
         // Map real events from storage to UI pulses, reconciled with server status
         const mappedPulses: ConsentPulse[] = data.events.slice(0, 12).map(event => {
           // Cross-reference with backend status
-          const serverMatch = serverCompanies.find((c: any) => 
+          const serverMatch = serverCompanies.find((c: { name: string; status: string }) => 
             c.name.toLowerCase() === event.appName.toLowerCase()
           );
           
@@ -119,7 +123,7 @@ export default function PopupApp() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [score]);
 
   useEffect(() => {
     // Initial load
@@ -202,10 +206,20 @@ export default function PopupApp() {
           </div>
           <button
             onClick={handleAnalyzePage}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-primary-500 py-2.5 text-sm font-bold text-white shadow-sm transition-all hover:bg-primary-600 active:scale-[0.98]"
+            disabled={isAnalyzing}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-primary-500 py-2.5 text-sm font-bold text-white shadow-sm transition-all hover:bg-primary-600 active:scale-[0.98] disabled:opacity-80 disabled:cursor-not-allowed"
           >
-            <ScanText size={14} />
-            Analyze Policy
+            {isAnalyzing ? (
+              <>
+                <RefreshCw size={14} className="animate-spin" />
+                Analyzing...
+              </>
+            ) : (
+              <>
+                <ScanText size={14} />
+                Analyze Policy
+              </>
+            )}
           </button>
         </section>
 

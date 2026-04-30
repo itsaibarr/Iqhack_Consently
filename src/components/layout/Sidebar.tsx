@@ -15,7 +15,7 @@ function cn(...inputs: ClassValue[]) {
 }
 
 const NAV_ITEMS = [
-  { name: "Consent Map", icon: Shield, href: "/" },
+  { name: "Dashboard", icon: Shield, href: "/" },
   { name: "Inventory", icon: LayoutGrid, href: "/inventory" },
   { name: "Live Map", icon: Globe, href: "/map" },
   { name: "Activity", icon: History, href: "/activity" },

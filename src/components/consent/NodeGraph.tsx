@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useRef, useEffect, useState } from "react";
+import React, { useMemo, useRef, useEffect, useState, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
 import { CompanyRecord } from "@/lib/constants";
 import { calculateCompanyImpact } from "@/lib/privacy";
@@ -38,7 +38,11 @@ export function NodeGraph({
   const containerRef = useRef<HTMLDivElement>(null);
   const fgRef = useRef<ForceGraphMethods>(undefined);
   const [dimensions, setDimensions] = useState({ width: 800, height: 400 });
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
   const [isDragging, setIsDragging] = useState(false);
   
   // Highlight states
@@ -69,33 +73,28 @@ export function NodeGraph({
     return { nodes, links };
   }, [companies]);
 
+
+
   useEffect(() => {
-    // Avoid synchronous setState during initial mount
-    const frame = requestAnimationFrame(() => {
-      setMounted(true);
-      if (containerRef.current) {
+    const node = containerRef.current;
+    if (!node) return;
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) {
         setDimensions({
-          width: containerRef.current.offsetWidth,
-          height: containerRef.current.offsetHeight || 500,
+          width: entry.contentRect.width,
+          height: entry.contentRect.height || 500,
         });
       }
     });
 
-    const handleResize = () => {
-      if (containerRef.current) {
-        setDimensions({
-          width: containerRef.current.offsetWidth,
-          height: containerRef.current.offsetHeight || 500,
-        });
-      }
-    };
-
-    window.addEventListener("resize", handleResize);
+    observer.observe(node);
+    
     return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener("resize", handleResize);
+      observer.disconnect();
     };
-  }, []);
+  }, [mounted]);
 
   useEffect(() => {
     if (mounted && fgRef.current) {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { supabaseAdmin, getSupabaseAdmin } from "@/lib/supabase-admin";
 import { RiskLevel, ConsentStatus, CompanyRecord, DEMO_USER_ID } from "@/lib/constants";
 import { ConsentEvent } from "@/types/consent";
 import { calculateTrustScore } from "@/lib/privacy";
@@ -9,6 +9,25 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
+
+const DEMO_IDS = new Set([
+  "demo-user-id",
+  "11111111-1111-1111-1111-111111111111",
+  "demo@consently.ai",
+  DEMO_USER_ID,
+]);
+
+async function validateBearerToken(req: NextRequest, userId: string): Promise<boolean> {
+  if (DEMO_IDS.has(userId)) return true;
+
+  const authHeader = req.headers.get("authorization");
+  if (!authHeader?.startsWith("Bearer ")) return false;
+
+  const token = authHeader.slice(7);
+  const { data, error } = await getSupabaseAdmin().auth.getUser(token);
+
+  return !error && data.user?.id === userId;
+}
 
 export async function OPTIONS() {
   return NextResponse.json({}, { headers: corsHeaders });
@@ -24,12 +43,17 @@ export async function POST(req: NextRequest) {
     }
 
     let userId = event.userId;
-    const DEMO_IDS = ["demo-user-id", "11111111-1111-1111-1111-111111111111", "demo@consently.ai"];
-    if (DEMO_IDS.includes(userId)) {
+    if (DEMO_IDS.has(userId)) {
       userId = DEMO_USER_ID;
     }
 
-    // 2. Transform the OAuth detection into a Dashboard-compatible record
+    // 2. Auth: verify the JWT matches the claimed userId (skipped for demo)
+    const authorized = await validateBearerToken(req, event.userId);
+    if (!authorized) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
+    }
+
+    // 3. Transform the OAuth detection into a Dashboard-compatible record
     const categoryMap: Record<string, string> = {
       google: "CONSUMER",
       github: "CONSUMER",
@@ -73,7 +97,7 @@ export async function POST(req: NextRequest) {
       } : null
     };
 
-    // 3. Persist to Supabase using Admin/Service Role client to bypass RLS
+    // 4. Persist to Supabase using Admin/Service Role client to bypass RLS
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
       return NextResponse.json(
         { error: "SUPABASE_SERVICE_ROLE_KEY not configured — add it to .env.local" },
@@ -123,8 +147,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Missing userId" }, { status: 400, headers: corsHeaders });
     }
 
-    const DEMO_IDS = ["demo-user-id", "11111111-1111-1111-1111-111111111111", "demo@consently.ai"];
-    if (DEMO_IDS.includes(userId)) {
+    if (DEMO_IDS.has(userId)) {
       userId = DEMO_USER_ID;
     }
 

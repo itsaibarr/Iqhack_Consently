@@ -1,8 +1,8 @@
 # Consently Pre-Launch Audit Report
-**Date:** 2026-04-30 (updated 2026-04-30)
+**Date:** 2026-04-30 (updated 2026-04-30, Wave 3 on 2026-04-30)
 **Scope:** Dashboard (Next.js) + Browser Extension (MV3)  
 **Baseline:** `docs/Consently_PRD.md` + `docs/Consently_Ideal_UI.md`  
-**Verdict:** ~85–90% PRD alignment. Core mechanics work; API key exposure remains the only unresolved critical risk.
+**Verdict:** ~95% PRD alignment. All critical security issues resolved. One medium-priority DB migration remains.
 
 ---
 
@@ -11,7 +11,8 @@
 | Wave | Fixed | Remaining |
 |---|---|---|
 | Wave 1 (UI/demo blockers) | D1, D2, D3, D5, D6, D7, E3, P1 dialog a11y, Missing #1 | — |
-| Wave 2 (safety + security) | RISK-2, RISK-7, RISK-8, E5, E6/RISK-6 | RISK-1 (API key proxy), RISK-3 (auth header) |
+| Wave 2 (safety + security) | RISK-2, RISK-7, RISK-8, E5, E6/RISK-6 | — |
+| Wave 3 (auth hardening + a11y) | RISK-1, RISK-3/E2, Missing #4, RISK-9, P1 aria-labels, D4/Missing #2 already done | RISK-4 (demo DB seed) |
 | Testing | 39 Playwright E2E tests added, all green | — |
 
 ---
@@ -208,14 +209,21 @@ src/
 
 | Priority | Item | Notes |
 |---|---|---|
-| CRITICAL | RISK-1: Proxy OpenRouter API key server-side | Needs new `/api/analyze` Next.js route; extension posts text, dashboard calls OpenRouter |
-| CRITICAL | RISK-3/E2: Auth header on extension sync | Need to relay Supabase JWT through AUTH_SUCCESS handshake; validate on API route |
 | HIGH | RISK-4: Seed `demo@consently.ai` user via migration | Prevents demo breakage on DB reset |
-| MEDIUM | D4/Missing #2: Onboarding re-trigger | Add `?reset_onboarding=1` query param or `/reset` route |
-| MEDIUM | Missing #4: Extension install detection | Dashboard should ping extension ID and show "Install Extension" CTA if absent |
-| MEDIUM | RISK-9: Scout error handling | Add try/catch + user-visible fallback for Google permissions scraper |
-| LOW | P1: `aria-label` on service cards / nav links | Final accessibility pass |
 
 ---
 
-*Audit initiated session S365 on 2026-04-30. Wave 2 fixes applied same day. E2E suite added with 39 green tests.*
+## 11. Wave 3 Changes (2026-04-30)
+
+| Item | Change |
+|---|---|
+| RISK-1 (API key proxy) | ✅ FIXED: `/api/analyze` Next.js route reads `OPENROUTER_API_KEY` from server env; `privacyAnalyzer.ts` calls the proxy URL |
+| RISK-3/E2 (auth header) | ✅ FIXED: `sync.ts` attaches `Authorization: Bearer <token>` when `accessToken` is stored; `/api/consents` validates JWT via `supabase.auth.getUser(token)` with demo bypass |
+| Missing #4 (extension detection) | ✅ FIXED: Sidebar pings EXTENSION_ID on mount; shows "Install Extension" CTA with Chrome Web Store link when extension absent |
+| RISK-9 (Scout error handling) | ✅ FIXED: DOM scraping wrapped in try/catch; user-visible grey badge shown when markup is unreadable or scraping fails |
+| P1 (aria-labels) | ✅ FIXED: `aria-label` + `aria-current="page"` on all nav links; `role="article"` + `aria-label` on service cards; `aria-label` on Revoke, View Details, Reconnect buttons |
+| D4/Missing #2 (onboarding re-trigger) | ✅ Already done: `?reset=1` query param clears `localStorage` flag — confirmed in page.tsx |
+
+---
+
+*Audit initiated session S365 on 2026-04-30. Wave 2 fixes applied same day. Wave 3 applied same day. E2E suite added with 39 green tests.*

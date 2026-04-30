@@ -54,6 +54,8 @@ export function CompanyCard({ record, onRevoke, onReconnect, onViewDetails }: Co
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: isRevoked ? 0 : -2 }}
+      role="article"
+      aria-label={`${record.name} — ${config.label} risk${isRevoked ? ", revoked" : ""}`}
       className={cn(
         "group relative flex h-[340px] w-full flex-col rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-card)] p-6 shadow-sm transition-all",
         isRevoked
@@ -127,6 +129,7 @@ export function CompanyCard({ record, onRevoke, onReconnect, onViewDetails }: Co
         {isRevoked ? (
           <button
             onClick={() => onReconnect?.(record.id)}
+            aria-label={`Reconnect ${record.name}`}
             className="text-[13px] font-medium text-[var(--color-primary-500)] hover:text-[var(--color-primary-600)] flex items-center gap-1.5 transition-colors"
           >
             <RotateCcw size={13} strokeWidth={2.5} />
@@ -135,6 +138,7 @@ export function CompanyCard({ record, onRevoke, onReconnect, onViewDetails }: Co
         ) : (
           <button
             onClick={() => onViewDetails?.(record.id)}
+            aria-label={`View details for ${record.name}`}
             className="text-[13px] font-medium text-[var(--color-primary-500)] hover:text-[var(--color-primary-600)] flex items-center gap-1 transition-colors"
           >
             View Details <ChevronRight size={14} strokeWidth={2.5} />
@@ -150,6 +154,7 @@ export function CompanyCard({ record, onRevoke, onReconnect, onViewDetails }: Co
           record.status === "ACTIVE" && (
             <button
               onClick={() => onRevoke?.(record.id)}
+              aria-label={`Revoke consent for ${record.name}`}
               className="rounded-[var(--radius-md)] bg-[var(--color-risk-red-50)] border border-[var(--color-risk-red-100)] px-3.5 py-1.5 text-[13px] font-semibold text-[var(--color-risk-red-600)] transition-all hover:bg-[var(--color-risk-red-500)] hover:text-white hover:border-transparent active:scale-95"
             >
               Revoke

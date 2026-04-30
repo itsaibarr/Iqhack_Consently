@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ShieldAlert, Trash2, AlertTriangle } from "lucide-react";
 import { CompanyRecord } from "@/lib/constants";
@@ -39,10 +39,22 @@ export function RevokeConfirmModal(props: RevokeConfirmModalProps) {
     props.onConfirm(reason || undefined);
   };
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     setReason("");
     props.onCancel();
-  };
+  }, [props]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !props.isLoading) {
+        handleCancel();
+      }
+    };
+    if (props.isOpen) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [props.isOpen, props.isLoading, handleCancel]);
 
   const isBulk = props.mode === "bulk";
   const title = isBulk
@@ -73,6 +85,9 @@ export function RevokeConfirmModal(props: RevokeConfirmModalProps) {
             className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
           >
             <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="revoke-modal-title"
               className="pointer-events-auto w-full max-w-md rounded-[var(--radius-xl)] border border-neutral-100 bg-white shadow-2xl overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
@@ -82,7 +97,7 @@ export function RevokeConfirmModal(props: RevokeConfirmModalProps) {
                   <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--color-risk-red-50)]">
                     <ShieldAlert size={18} style={{ color: "var(--color-risk-red-500)" }} />
                   </div>
-                  <h2 className="text-[15px] font-semibold text-neutral-900 leading-tight">{title}</h2>
+                  <h2 id="revoke-modal-title" className="text-[15px] font-semibold text-neutral-900 leading-tight">{title}</h2>
                 </div>
                 <button
                   onClick={handleCancel}

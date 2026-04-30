@@ -126,8 +126,12 @@ export default function InventoryPage() {
               {/* Filter Suite */}
               <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <div className="flex-1 relative">
+                  <label htmlFor="search-inventory" className="sr-only">
+                    Search services
+                  </label>
                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-500" size={16} />
                   <input
+                    id="search-inventory"
                     type="text"
                     placeholder="Search services..."
                     className="w-full h-10 pl-10 pr-4 rounded-[var(--radius-md)] border border-neutral-200 bg-white text-body-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-primary-500)] focus:border-[var(--color-primary-500)] transition-all placeholder:text-neutral-400"

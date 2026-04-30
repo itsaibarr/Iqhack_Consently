@@ -12,7 +12,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { PLAIN_LANGUAGE_MAP } from "@/lib/privacy";
-import { RISK_CONFIG_MAP, CompanyRecord, PrivacyPolicyReport } from "@/lib/constants";
+import { CompanyRecord, PrivacyPolicyReport } from "@/lib/constants";
 import { Container } from "@/components/layout/Container";
 
 interface ServiceDetailViewProps {
@@ -57,7 +57,7 @@ export function ServiceDetailView({
   onReconnect,
 }: ServiceDetailViewProps) {
   const isRevoked = service.status === "REVOKED";
-  const riskConfig = RISK_CONFIG_MAP[service.risk];
+
   const report = service.policyReport || MOCK_REPORT;
 
   return (

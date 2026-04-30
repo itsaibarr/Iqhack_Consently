@@ -66,7 +66,7 @@ export async function updateUserSettings(userId: string, settings: Partial<UserS
 
 export async function deleteUserAccount(userId: string) {
   // 1. Fetch all active companies to trigger GDPR erasure (optional based on plan)
-  const { data: companies } = await supabase
+  await supabase
     .from("companies")
     .select("name, status, policy_report, data_types")
     .eq("user_id", userId)

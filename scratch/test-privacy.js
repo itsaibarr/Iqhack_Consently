@@ -18,14 +18,14 @@ async function resolvePolicyUrl(domain) {
       const res = await fetch(url, { method: "GET", signal: AbortSignal.timeout(4000) });
       if (res.ok) return url;
       throw new Error("Not ok");
-    } catch (err) {
-      throw err;
+    } catch {
+      throw new Error("Not ok");
     }
   });
 
   try {
     return await Promise.any(fetchPromises);
-  } catch (err) {
+  } catch {
     return null; // ignore fallback for now
   }
 }

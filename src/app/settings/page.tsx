@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Container } from "@/components/layout/Container";
-import { Bell, Zap, Monitor, Lock, Trash2, ChevronRight, Check, Loader2 } from "lucide-react";
+import { Bell, Zap, Monitor, Lock, Trash2, Check, Loader2 } from "lucide-react";
 import { useConsent } from "@/context/ConsentContext";
 import { getUserSettings, updateUserSettings, deleteUserAccount, UserSettings } from "@/actions/settings";
 import { useRouter } from "next/navigation";

@@ -6,7 +6,7 @@ import { useConsent } from "@/context/ConsentContext";
 import { Shield, Mail, Fingerprint, Calendar, Award } from "lucide-react";
 import { SummaryCard } from "@/components/ui/SummaryCard";
 import { useMemo, useState } from "react";
-import { Loader2, CheckCircle2, AlertTriangle, X } from "lucide-react";
+import { Loader2, CheckCircle2 } from "lucide-react";
 import { calculateTrustScore } from "@/lib/privacy";
 import { RevokeConfirmModal } from "@/components/consent/RevokeConfirmModal";
 import { ToastContainer, useToast } from "@/components/ui/Toast";

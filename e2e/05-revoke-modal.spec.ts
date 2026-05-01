@@ -21,7 +21,7 @@ test.describe("Revoke confirmation modal", () => {
     page,
   }) => {
     // Click the first visible Revoke button
-    const revokeBtn = page.getByRole("button", { name: /^revoke$/i }).first();
+    const revokeBtn = page.getByRole("button", { name: /^revoke consent/i }).first();
     await revokeBtn.click();
 
     const dialog = page.locator('[role="dialog"]');
@@ -30,7 +30,7 @@ test.describe("Revoke confirmation modal", () => {
   });
 
   test("revoke dialog has aria-labelledby pointing to a title", async ({ page }) => {
-    await page.getByRole("button", { name: /^revoke$/i }).first().click();
+    await page.getByRole("button", { name: /^revoke consent/i }).first().click();
 
     const dialog = page.locator('[role="dialog"]');
     await expect(dialog).toBeVisible({ timeout: 5_000 });
@@ -44,7 +44,7 @@ test.describe("Revoke confirmation modal", () => {
   });
 
   test("revoke dialog contains a reason dropdown", async ({ page }) => {
-    await page.getByRole("button", { name: /^revoke$/i }).first().click();
+    await page.getByRole("button", { name: /^revoke consent/i }).first().click();
 
     const dialog = page.locator('[role="dialog"]');
     await expect(dialog).toBeVisible({ timeout: 5_000 });
@@ -55,7 +55,7 @@ test.describe("Revoke confirmation modal", () => {
   });
 
   test("pressing Escape closes the revoke dialog", async ({ page }) => {
-    await page.getByRole("button", { name: /^revoke$/i }).first().click();
+    await page.getByRole("button", { name: /^revoke consent/i }).first().click();
 
     const dialog = page.locator('[role="dialog"]');
     await expect(dialog).toBeVisible({ timeout: 5_000 });
@@ -65,7 +65,7 @@ test.describe("Revoke confirmation modal", () => {
   });
 
   test("clicking Cancel in the revoke dialog closes it", async ({ page }) => {
-    await page.getByRole("button", { name: /^revoke$/i }).first().click();
+    await page.getByRole("button", { name: /^revoke consent/i }).first().click();
 
     const dialog = page.locator('[role="dialog"]');
     await expect(dialog).toBeVisible({ timeout: 5_000 });

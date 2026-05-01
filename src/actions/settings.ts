@@ -12,7 +12,7 @@ export interface UserSettings {
 }
 
 export async function getUserSettings(userId: string): Promise<UserSettings | null> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("profile_settings")
     .select("*")
     .eq("user_id", userId)

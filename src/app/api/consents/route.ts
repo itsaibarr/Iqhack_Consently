@@ -147,6 +147,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Missing userId" }, { status: 400, headers: corsHeaders });
     }
 
+    const authorized = await validateBearerToken(req, userId);
+    if (!authorized) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
+    }
+
     if (DEMO_IDS.has(userId)) {
       userId = DEMO_USER_ID;
     }

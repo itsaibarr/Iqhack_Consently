@@ -133,17 +133,15 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
               <PuzzleIcon size={14} className="text-[var(--color-primary-500)]" />
               <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--color-primary-700)]">Extension Not Found</span>
             </div>
-            <p className="text-[11px] text-[var(--color-primary-600)] leading-relaxed mb-2">
-              Install the browser extension to detect OAuth flows and analyze privacy policies in real time.
+            <p className="text-[11px] text-[var(--color-primary-600)] leading-relaxed mb-1">
+              Load the extension in developer mode to enable OAuth detection.
             </p>
-            <a
-              href="https://chromewebstore.google.com/detail/consently/kegngnalimkofmfaeefinlljgdhomgon"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block w-full text-center rounded-[var(--radius-sm)] bg-[var(--color-primary-500)] px-3 py-1.5 text-[11px] font-bold text-white hover:bg-[var(--color-primary-600)] transition-colors"
-            >
-              Install Extension
-            </a>
+            <ol className="text-[10px] text-[var(--color-primary-500)] leading-relaxed space-y-0.5 list-decimal list-inside mb-2">
+              <li>Run <code className="font-mono bg-[var(--color-primary-100)] px-0.5 rounded">npm run build</code> in <code className="font-mono bg-[var(--color-primary-100)] px-0.5 rounded">extension/</code></li>
+              <li>Open <code className="font-mono bg-[var(--color-primary-100)] px-0.5 rounded">chrome://extensions</code></li>
+              <li>Enable Developer mode</li>
+              <li>Load unpacked → select <code className="font-mono bg-[var(--color-primary-100)] px-0.5 rounded">extension/dist</code></li>
+            </ol>
           </div>
         )}
 

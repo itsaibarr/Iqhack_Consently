@@ -1,6 +1,7 @@
 "use server";
 
 import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 import { revalidatePath } from "next/cache";
 
 export interface UserSettings {
@@ -27,7 +28,7 @@ export async function getUserSettings(userId: string): Promise<UserSettings | nu
         handshake_interval: 120,
       };
       
-      const { data: newData, error: createError } = await supabase
+      const { data: newData, error: createError } = await supabaseAdmin
         .from("profile_settings")
         .insert({
           user_id: userId,

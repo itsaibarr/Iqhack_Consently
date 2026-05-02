@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { LucideShieldCheck, LucideLoader2, Eye, EyeOff } from "lucide-react";
@@ -27,6 +27,24 @@ export default function AuthPage() {
    const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "complete" | "failed">("idle");
+
+  // Force logout if user is already logged in and lands on this page
+  // This ensures that "Connect Account" from the extension always starts with a fresh session.
+  useEffect(() => {
+    const checkAndLogout = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const isDemoMode = document.cookie.includes("consently_demo_mode=true");
+      
+      if (session || isDemoMode) {
+        console.log("[Consently] Active session detected on auth page. Logging out for fresh start.");
+        if (session) await supabase.auth.signOut();
+        document.cookie = "consently_demo_mode=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+        // Refresh to clear any local state/context
+        window.location.href = "/auth";
+      }
+    };
+    checkAndLogout();
+  }, []);
 
   // Sync session with extension upon successful auth
   const syncWithExtension = (userId: string, userEmail: string, accessToken?: string): Promise<boolean> => {

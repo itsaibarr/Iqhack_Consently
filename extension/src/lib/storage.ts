@@ -1,4 +1,5 @@
-import { ConsentEvent, ExtensionState, UserSettings } from "./types";
+import { ConsentEvent, ExtensionState, UserSettings, ScopeEntry } from "./types";
+import { getBaseDomain } from "./utils";
 
 const STORAGE_KEY = "consently_state";
 
@@ -27,7 +28,10 @@ export async function saveState(state: ExtensionState): Promise<void> {
 
 export async function upsertEvent(event: ConsentEvent): Promise<string> {
   const state = await getState();
-  const existingIndex = state.events.findIndex(e => e.appDomain === event.appDomain);
+  const eventDomain = getBaseDomain(event.appDomain);
+  
+  // Find index of existing event for this domain
+  const existingIndex = state.events.findIndex(e => getBaseDomain(e.appDomain) === eventDomain);
   
   let targetEvent: ConsentEvent;
   let newEvents = [...state.events];
@@ -46,6 +50,7 @@ export async function upsertEvent(event: ConsentEvent): Promise<string> {
     targetEvent = {
       ...existing,
       ...event, // new data wins (analysis, etc)
+      appDomain: eventDomain, // Ensure it's normalized
       id: existing.id, // preserve ID
       overallRisk: (isNewAnalysis || hadAnalysis) 
         ? (isNewAnalysis ? event.overallRisk : existing.overallRisk)
@@ -55,8 +60,17 @@ export async function upsertEvent(event: ConsentEvent): Promise<string> {
       synced: false,
     };
     newEvents[existingIndex] = targetEvent;
+    
+    // Safety check: Remove any other duplicates of the same domain that might have snuck in
+    newEvents = newEvents.filter((e, idx) => 
+      idx === existingIndex || getBaseDomain(e.appDomain) !== eventDomain
+    );
   } else {
-    targetEvent = { ...event, userId: event.userId || state.userId || undefined };
+    targetEvent = { 
+      ...event, 
+      appDomain: eventDomain, // Ensure it's normalized
+      userId: event.userId || state.userId || undefined 
+    };
     newEvents = [targetEvent, ...newEvents].slice(0, 500);
   }
 

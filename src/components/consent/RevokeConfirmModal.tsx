@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ShieldAlert, Trash2, AlertTriangle } from "lucide-react";
+import { X, ShieldAlert, Trash2, AlertTriangle, ExternalLink } from "lucide-react";
 import { CompanyRecord } from "@/lib/constants";
+import { getRevokeUrl } from "@/lib/privacy";
 
 const REVOKE_REASONS = [
   { value: "", label: "Select a reason (optional)" },
@@ -131,15 +132,36 @@ export function RevokeConfirmModal(props: RevokeConfirmModalProps) {
                   </select>
                 </div>
 
-                {/* Warning note */}
-                <div className="flex items-start gap-2.5 rounded-lg bg-[var(--color-risk-red-50)] border border-[var(--color-risk-red-100)] px-4 py-3">
-                  <AlertTriangle size={14} className="shrink-0 mt-0.5" style={{ color: "var(--color-risk-red-500)" }} />
-                  <p className="text-[12px] text-[var(--color-risk-red-600)] leading-relaxed">
-                    {isBulk
-                      ? "Active API tokens for all selected services will be invalidated immediately. This action is logged."
-                      : "Active API tokens and session credentials will be invalidated immediately. This action is logged."}
+                {/* What revoke actually does */}
+                <div className="flex items-start gap-2.5 rounded-lg bg-[var(--color-primary-50)] border border-[var(--color-primary-100)] px-4 py-3">
+                  <AlertTriangle size={14} className="shrink-0 mt-0.5 text-[var(--color-primary-500)]" />
+                  <p className="text-[12px] text-[var(--color-primary-700)] leading-relaxed">
+                    This marks the service as revoked in your records and sends a GDPR Article 17 deletion request. The service has up to 30 days to comply.
                   </p>
                 </div>
+
+                {/* OAuth manual step for known providers */}
+                {!isBulk && (() => {
+                  const revokeUrl = getRevokeUrl((props as SingleModeProps).service.name);
+                  return revokeUrl ? (
+                    <div className="flex items-start gap-2.5 rounded-lg bg-amber-50 border border-amber-100 px-4 py-3">
+                      <AlertTriangle size={14} className="shrink-0 mt-0.5 text-amber-500" />
+                      <div className="space-y-1.5">
+                        <p className="text-[12px] text-amber-800 leading-relaxed">
+                          To also remove live OAuth access, go to {revokeUrl.label}&apos;s connected apps and remove Consently manually.
+                        </p>
+                        <a
+                          href={revokeUrl.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-[12px] font-semibold text-amber-700 hover:text-amber-900 underline underline-offset-2"
+                        >
+                          Open {revokeUrl.label} settings <ExternalLink size={11} />
+                        </a>
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
               </div>
 
               {/* Footer */}
@@ -209,20 +231,20 @@ function SingleBody({ service }: { service: CompanyRecord }) {
             </div>
         )}
 
-        {/* Automated Request Info */}
+        {/* GDPR deletion request info */}
         <div className="p-3 rounded-lg border border-primary-100 bg-primary-50/50 space-y-1.5">
             <p className="text-[11px] font-semibold text-primary-700 uppercase tracking-wide flex items-center gap-1.5">
                 <ShieldAlert size={12} />
-                Automated Revocation Request
+                GDPR Deletion Request
             </p>
             <p className="text-[12px] text-primary-800 leading-relaxed">
-                A formal Article 17 (Right to Erasure) request will be dispatched to 
-                <span className="font-semibold px-1.5 py-0.5 rounded bg-white border border-primary-200 mx-1">
+                A formal Article 17 (Right to Erasure) request will be sent to{" "}
+                <span className="font-semibold px-1.5 py-0.5 rounded bg-white border border-primary-200">
                     {service.policyReport?.dpoEmail || `privacy@${service.name.toLowerCase().replace(/\s+/g, "")}.com`}
                 </span>
             </p>
             <p className="text-[10px] text-primary-600">
-                The service provider is legally obligated to respond within 30 days.
+                The service has up to 30 days to comply. This does not instantly revoke OAuth access.
             </p>
         </div>
       </div>

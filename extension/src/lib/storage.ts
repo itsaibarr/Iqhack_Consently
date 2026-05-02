@@ -73,3 +73,17 @@ export async function updateSettings(settings: Partial<UserSettings>): Promise<v
     settings: { ...state.settings, ...settings },
   });
 }
+
+/** Clears auth session while preserving settings. */
+export async function clearAuth(): Promise<void> {
+  const state = await getState();
+  await saveState({
+    ...state,
+    userId: null,
+    userEmail: null,
+    accessToken: null,
+    handshakeComplete: false,
+    isDemoMode: false,
+    events: [],
+  });
+}

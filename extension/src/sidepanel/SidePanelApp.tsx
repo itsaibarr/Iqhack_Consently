@@ -4,9 +4,9 @@ import { useEffect, useState, useCallback } from "react";
 import {
   Shield, ScanText, Activity, Zap, Lock,
   ChevronRight, RefreshCw, ArrowLeft, AlertTriangle,
-  CheckCircle, Users, Eye,
+  CheckCircle, Users, Eye, LogOut,
 } from "lucide-react";
-import { getState } from "../lib/storage";
+import { getState, clearAuth } from "../lib/storage";
 import type { PolicyAnalysis } from "../background/privacyAnalyzer";
 import type { ConsentEvent } from "../lib/types";
 import { clsx, type ClassValue } from "clsx";
@@ -129,6 +129,15 @@ export default function SidePanelApp() {
     chrome.runtime.sendMessage({ type: "SIDEBAR_DISMISSED" });
   }, []);
 
+  const handleLogout = useCallback(async () => {
+    await clearAuth();
+    setIsLinked(false);
+    setEvents([]);
+    setScore(100);
+    setView("dashboard");
+    setAnalysisState(null);
+  }, []);
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-neutral-25">
@@ -143,7 +152,7 @@ export default function SidePanelApp() {
 
   return (
     <div className="flex h-screen flex-col bg-neutral-25 overflow-hidden">
-      <Header />
+      <Header onLogout={handleLogout} />
 
       <main className="flex-1 overflow-y-auto">
         {view === "dashboard" && (
@@ -189,7 +198,7 @@ export default function SidePanelApp() {
 // Header
 // ---------------------------------------------------------------------------
 
-function Header() {
+function Header({ onLogout }: { onLogout: () => void }) {
   return (
     <header className="flex items-center justify-between border-b border-neutral-100 bg-white px-4 py-3 shadow-sm">
       <div className="flex items-center gap-2">
@@ -198,9 +207,18 @@ function Header() {
         </div>
         <span className="text-base font-bold tracking-tight text-neutral-900">Consently</span>
       </div>
-      <div className="flex items-center gap-1.5">
-        <div className="h-1.5 w-1.5 rounded-full bg-success-500 animate-pulse" />
-        <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Active</span>
+      <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-1.5">
+          <div className="h-1.5 w-1.5 rounded-full bg-success-500 animate-pulse" />
+          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Active</span>
+        </div>
+        <button
+          onClick={onLogout}
+          title="Sign Out"
+          className="flex h-6 w-6 items-center justify-center rounded-md text-neutral-300 hover:bg-red-50 hover:text-red-500 transition-colors"
+        >
+          <LogOut size={13} />
+        </button>
       </div>
     </header>
   );

@@ -567,7 +567,9 @@ function LinkView({ onLinked }: { onLinked: () => void }) {
       </div>
       <button
         onClick={() => {
-          window.open(import.meta.env.VITE_DASHBOARD_URL || "https://consently.vercel.app");
+          const dashboardBase = import.meta.env.VITE_DASHBOARD_URL || "https://consently.vercel.app";
+          const dashboardUrl = dashboardBase.endsWith("/") ? `${dashboardBase}auth` : `${dashboardBase}/auth`;
+          window.open(dashboardUrl, "_blank");
           // Poll for auth completion
           const interval = setInterval(async () => {
             const data = await getState();

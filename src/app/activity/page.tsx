@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { Container } from "@/components/layout/Container";
-import { ShieldCheck, ShieldAlert, Shield, Filter, Calendar, ChevronRight } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Shield, Filter, Calendar, ChevronRight, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -41,7 +41,7 @@ import { useToast, ToastContainer } from "@/components/ui/Toast";
 import { CompanyRecord } from "@/lib/constants";
 
 export default function ActivityPage() {
-  const { history, companies, revokeConsent, reconnectService, user } = useConsent();
+  const { history, companies, revokeConsent, reconnectService, clearHistory, user } = useConsent();
   const { toasts, showToast, dismiss } = useToast();
   
   const [filter, setFilter] = useState<"ALL" | ActionType>("ALL");
@@ -50,6 +50,8 @@ export default function ActivityPage() {
   // Revocation state if needed in detail view
   const [pendingRevokeId, setPendingRevokeId] = useState<string | null>(null);
   const [isRevoking, setIsRevoking] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
 
   const filteredHistory = useMemo(() => {
     return history.filter(item => {
@@ -106,6 +108,17 @@ export default function ActivityPage() {
     showToast("Audit log exported successfully.", "success");
   };
 
+  const handleClearHistory = async () => {
+    setIsClearing(true);
+    const { success } = await clearHistory();
+    setIsClearing(false);
+    setShowClearConfirm(false);
+    showToast(
+      success ? "History cleared." : "Failed to clear history.",
+      success ? "success" : "error"
+    );
+  };
+
   return (
     <main className="min-h-screen bg-[#FDFDFD] pb-32">
       <AnimatePresence mode="wait">
@@ -142,7 +155,7 @@ export default function ActivityPage() {
             </div>
 
             {/* Filter Bar */}
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {(["ALL", "GRANTED", "REVOKED"] as const).map((type) => (
                 <button
                   key={type}
@@ -160,6 +173,16 @@ export default function ActivityPage() {
                   {type.charAt(0) + type.slice(1).toLowerCase()}
                 </button>
               ))}
+
+              {history.length > 0 && (
+                <button
+                  onClick={() => setShowClearConfirm(true)}
+                  className="flex items-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2 text-label-md text-red-500 transition-all hover:bg-red-50 hover:border-red-300"
+                >
+                  <Trash2 size={14} />
+                  Clear History
+                </button>
+              )}
             </div>
           </div>
         </Container>
@@ -312,6 +335,57 @@ export default function ActivityPage() {
           isLoading={isRevoking}
         />
       )}
+
+      {/* Clear History confirmation */}
+      <AnimatePresence>
+        {showClearConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(28,28,30,0.5)] backdrop-blur-sm"
+            onClick={() => !isClearing && setShowClearConfirm(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 8 }}
+              transition={{ duration: 0.15 }}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="clear-history-title"
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm mx-4 rounded-[var(--radius-xl)] border border-neutral-100 bg-white p-8 shadow-lg"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-50 mb-6">
+                <Trash2 size={18} className="text-red-500" />
+              </div>
+              <h2 id="clear-history-title" className="text-h3 text-neutral-900">
+                Clear all history?
+              </h2>
+              <p className="mt-3 text-body-sm text-neutral-500 leading-relaxed">
+                This will permanently delete all {history.length} event{history.length !== 1 ? "s" : ""} from your permission history. This cannot be undone.
+              </p>
+              <div className="mt-8 flex gap-3">
+                <button
+                  onClick={() => setShowClearConfirm(false)}
+                  disabled={isClearing}
+                  className="btn-ghost flex-1 h-11 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleClearHistory}
+                  disabled={isClearing}
+                  className="flex flex-1 h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] bg-red-500 px-4 text-label-md font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50"
+                >
+                  {isClearing ? "Clearing…" : "Clear History"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <ToastContainer toasts={toasts} dismiss={dismiss} />
     </main>

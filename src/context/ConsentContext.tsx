@@ -17,6 +17,7 @@ interface ConsentContextType {
   revokeAllHighRisk: (reason?: string) => Promise<{ count: number; emailsSent: number }>;
   reconnectService: (id: string) => Promise<{ success: boolean }>;
   addHistoryEvent: (event: Omit<ActivityRecord, "id">) => void;
+  clearHistory: () => Promise<{ success: boolean }>;
   syncExtensionEvents: () => Promise<void>;
 }
 
@@ -272,7 +273,7 @@ export function ConsentProvider({ children }: { children: ReactNode }) {
 
   const addHistoryEvent = async (event: Omit<ActivityRecord, "id">) => {
     if (!user) return;
-    
+
     await supabase.from("history").insert({
       user_id: user.id,
       company_name: event.companyName,
@@ -281,8 +282,24 @@ export function ConsentProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const clearHistory = async (): Promise<{ success: boolean }> => {
+    if (!user) return { success: false };
+    try {
+      const { error } = await supabase
+        .from("history")
+        .delete()
+        .eq("user_id", user.id);
+      if (error) throw error;
+      setHistory([]);
+      return { success: true };
+    } catch (e) {
+      console.error("Clear history failed", e);
+      return { success: false };
+    }
+  };
+
   return (
-    <ConsentContext.Provider value={{ user, companies, history, revokeConsent, revokeAllHighRisk, reconnectService, addHistoryEvent, syncExtensionEvents }}>
+    <ConsentContext.Provider value={{ user, companies, history, revokeConsent, revokeAllHighRisk, reconnectService, addHistoryEvent, clearHistory, syncExtensionEvents }}>
       {children}
     </ConsentContext.Provider>
   );

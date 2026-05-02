@@ -130,6 +130,34 @@ export function calculateCompanyImpact(company: CompanyRecord): number {
 }
 
 // ---------------------------------------------------------------------------
+// Direct OAuth revocation URLs for known providers
+// Keyed by lowercase name fragment — matched with includes()
+// ---------------------------------------------------------------------------
+
+const REVOKE_URL_REGISTRY: { match: string; label: string; url: string }[] = [
+  { match: "google",    label: "Google",    url: "https://myaccount.google.com/permissions" },
+  { match: "gmail",     label: "Google",    url: "https://myaccount.google.com/permissions" },
+  { match: "youtube",   label: "Google",    url: "https://myaccount.google.com/permissions" },
+  { match: "github",    label: "GitHub",    url: "https://github.com/settings/applications" },
+  { match: "facebook",  label: "Facebook",  url: "https://www.facebook.com/settings?tab=applications" },
+  { match: "instagram", label: "Facebook",  url: "https://www.facebook.com/settings?tab=applications" },
+  { match: "meta",      label: "Meta",      url: "https://www.facebook.com/settings?tab=applications" },
+  { match: "microsoft", label: "Microsoft", url: "https://account.live.com/consent/Manage" },
+  { match: "apple",     label: "Apple",     url: "https://appleid.apple.com" },
+  { match: "twitter",   label: "Twitter/X", url: "https://twitter.com/settings/connected_apps" },
+  { match: "linkedin",  label: "LinkedIn",  url: "https://www.linkedin.com/psettings/permitted-services" },
+  { match: "spotify",   label: "Spotify",   url: "https://www.spotify.com/account/apps/" },
+  { match: "discord",   label: "Discord",   url: "https://discord.com/channels/@me" },
+  { match: "dropbox",   label: "Dropbox",   url: "https://www.dropbox.com/account/connected_apps" },
+];
+
+export function getRevokeUrl(companyName: string): { label: string; url: string } | null {
+  const lower = companyName.toLowerCase();
+  const match = REVOKE_URL_REGISTRY.find(r => lower.includes(r.match));
+  return match ? { label: match.label, url: match.url } : null;
+}
+
+// ---------------------------------------------------------------------------
 // Plain-language data-type descriptions
 // ---------------------------------------------------------------------------
 

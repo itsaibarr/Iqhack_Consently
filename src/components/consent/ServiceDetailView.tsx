@@ -239,10 +239,10 @@ export function ServiceDetailView({
                       className="w-full h-14 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow-md active:scale-[0.98]"
                     >
                       <Trash2 size={20} />
-                      Disconnect & Revoke
+                      Revoke & Request Deletion
                     </button>
                     <p className="text-label-sm text-neutral-400 text-center">
-                      This will immediately terminate active API keys.
+                      Marks as revoked and sends a GDPR deletion request.
                     </p>
                   </>
                 )}

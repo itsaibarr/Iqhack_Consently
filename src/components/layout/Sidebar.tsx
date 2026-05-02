@@ -146,7 +146,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
         )}
 
         {/* Bottom Section */}
-        <div className="mt-auto pt-6 border-t border-[var(--border-subtle)]">
+        <div className="mt-auto pt-6 border-t border-[var(--border-subtle)] space-y-1">
           <div className="relative">
             <AnimatePresence>
                 {isDropdownOpen && (
@@ -175,14 +175,6 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
                             <Settings size={14} />
                             <span>Settings</span>
                         </Link>
-                        <div className="my-1 h-[1px] bg-[var(--border-subtle)]" />
-                        <button
-                            onClick={() => signOut()}
-                            className="flex w-full items-center gap-2 rounded-[var(--radius-md)] px-3 py-2 text-[12px] font-semibold text-red-500 hover:bg-red-50 transition-colors"
-                        >
-                            <LogOut size={14} />
-                            <span>Sign Out</span>
-                        </button>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -211,16 +203,29 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
                     )}
                 </div>
                 {!isCollapsed && (
-                    <MoreHorizontal 
-                        size={16} 
+                    <MoreHorizontal
+                        size={16}
                         className={cn(
-                            "shrink-0 transition-transform", 
+                            "shrink-0 transition-transform",
                             isDropdownOpen && "rotate-90 text-[var(--color-primary-500)]"
-                        )} 
+                        )}
                     />
                 )}
             </button>
           </div>
+
+          <button
+            onClick={() => signOut()}
+            title="Sign Out"
+            aria-label="Sign Out"
+            className={cn(
+              "flex w-full items-center gap-2 rounded-[var(--radius-md)] py-2 text-[12px] font-semibold text-red-500 hover:bg-red-50 transition-colors",
+              isCollapsed ? "justify-center" : "px-3"
+            )}
+          >
+            <LogOut size={15} className="shrink-0" />
+            {!isCollapsed && <span>Sign Out</span>}
+          </button>
         </div>
       </div>
     </motion.aside>

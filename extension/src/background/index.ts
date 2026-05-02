@@ -230,6 +230,9 @@ async function handleAnalyzeCurrentPage(callerTabId?: number) {
     sharedWith: analysis.sharedWith,
     dpoEmail: analysis.dpoEmail ?? undefined,
   });
+  // No automatic sync here. Sync will only happen when the user clicks "Save"
+  // which triggers CONSENT_ACCEPTED message. This prevents double history entries.
+  console.log("Analysis complete for:", domain);
 
   // Re-fetch event for side panel
   const updatedState = await getState();

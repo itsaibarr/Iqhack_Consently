@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
-import { Shield, Activity, Zap, RefreshCw, ChevronRight, Globe, Lock, ScanText } from "lucide-react";
-import { getState } from "../lib/storage";
+import { Shield, Activity, Zap, RefreshCw, ChevronRight, Globe, Lock, ScanText, LogOut } from "lucide-react";
+import { getState, clearAuth } from "../lib/storage";
 import WelcomeView from "./WelcomeView";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -26,6 +26,13 @@ export default function PopupApp() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
 
+
+  const handleLogout = useCallback(async () => {
+    await clearAuth();
+    setHasSync(false);
+    setPulses([]);
+    setScore(88);
+  }, []);
 
   const handleAnalyzePage = useCallback(() => {
     setIsAnalyzing(true);
@@ -166,9 +173,18 @@ export default function PopupApp() {
           </div>
           <span className="text-lg font-bold tracking-tight text-neutral-900">Consently</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-success-500 animate-pulse" />
-          <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-400">Live Radar</span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-success-500 animate-pulse" />
+            <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-400">Live Radar</span>
+          </div>
+          <button
+            onClick={handleLogout}
+            title="Sign Out"
+            className="flex h-7 w-7 items-center justify-center rounded-md text-neutral-300 hover:bg-red-50 hover:text-red-500 transition-colors"
+          >
+            <LogOut size={14} />
+          </button>
         </div>
       </header>
 

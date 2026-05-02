@@ -25,11 +25,47 @@ export async function saveState(state: ExtensionState): Promise<void> {
   await chrome.storage.local.set({ [STORAGE_KEY]: state });
 }
 
-export async function appendEvent(event: ConsentEvent): Promise<void> {
+export async function upsertEvent(event: ConsentEvent): Promise<string> {
   const state = await getState();
-  const eventWithUser = { ...event, userId: event.userId || state.userId || undefined };
-  const events = [eventWithUser, ...state.events].slice(0, 500); // cap at 500
-  await saveState({ ...state, events });
+  const existingIndex = state.events.findIndex(e => e.appDomain === event.appDomain);
+  
+  let targetEvent: ConsentEvent;
+  let newEvents = [...state.events];
+
+  if (existingIndex !== -1) {
+    const existing = state.events[existingIndex];
+    // Merge scopes uniquely
+    const scopeMap = new Map<string, ScopeEntry>();
+    existing.scopesTranslated.forEach(s => scopeMap.set(s.raw, s));
+    event.scopesTranslated.forEach(s => scopeMap.set(s.raw, s));
+    
+    // Risk priority: AI analysis verdict wins over OAuth scopes.
+    const isNewAnalysis = !!event.plainSummary;
+    const hadAnalysis = !!existing.plainSummary;
+    
+    targetEvent = {
+      ...existing,
+      ...event, // new data wins (analysis, etc)
+      id: existing.id, // preserve ID
+      overallRisk: (isNewAnalysis || hadAnalysis) 
+        ? (isNewAnalysis ? event.overallRisk : existing.overallRisk)
+        : event.overallRisk,
+      scopesRaw: Array.from(new Set([...existing.scopesRaw, ...event.scopesRaw])),
+      scopesTranslated: Array.from(scopeMap.values()),
+      synced: false,
+    };
+    newEvents[existingIndex] = targetEvent;
+  } else {
+    targetEvent = { ...event, userId: event.userId || state.userId || undefined };
+    newEvents = [targetEvent, ...newEvents].slice(0, 500);
+  }
+
+  await saveState({ ...state, events: newEvents });
+  return targetEvent.id;
+}
+
+export async function appendEvent(event: ConsentEvent): Promise<void> {
+  await upsertEvent(event);
 }
 
 export async function markSynced(eventId: string): Promise<void> {

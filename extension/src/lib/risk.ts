@@ -12,7 +12,10 @@ const SCOPE_RISK_WEIGHTS: Record<RiskLevel, number> = { LOW: 1, MEDIUM: 3, HIGH:
  * - Two or more HIGH scopes → always HIGH regardless of company
  * - Trust factor from the global registry amplifies or reduces the weighted score
  */
-export function computeOverallRisk(scopes: ScopeEntry[], appDomain?: string): RiskLevel {
+export function computeOverallRisk(scopes: ScopeEntry[], appDomain?: string, aiRisk?: RiskLevel): RiskLevel {
+  // If AI has spoken, that's the source of truth for the policy-level risk
+  if (aiRisk) return aiRisk;
+
   if (scopes.length === 0) return "LOW";
 
   const highScopes = scopes.filter(s => s.risk === "HIGH").length;

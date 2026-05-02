@@ -89,8 +89,8 @@ chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
 
     const state = await getState();
     if (state.userId || state.isDemoMode) {
-      const success = await syncEvent(event);
-      if (success) await markSynced(event.id);
+      // Sync removed per requirement: Only analyzed events go to dashboard.
+      // Badge update still happens above.
     }
   })();
 });
@@ -186,9 +186,16 @@ async function handleAnalyzeCurrentPage(callerTabId?: number) {
     return;
   }
 
-  // 2. Build and store a shell event (local only until user approves)
-  const event = buildShellEvent(domain);
-  await appendEvent(event);
+  // 2. Build or find existing event
+  const state = await getState();
+  const existingEvent = state.events.find(e => e.appDomain === domain);
+  const eventId = existingEvent?.id || crypto.randomUUID();
+  
+  const event: ConsentEvent = existingEvent || buildShellEvent(domain);
+  if (!existingEvent) {
+    event.id = eventId;
+    await appendEvent(event);
+  }
 
   // 3. Tell side panel to enter analyzing state via session storage
   chrome.action.setBadgeText({ text: "…" });
@@ -215,7 +222,7 @@ async function handleAnalyzeCurrentPage(callerTabId?: number) {
     risk: analysis.riskVerdict,
   }));
 
-  await patchEventRisk(event.id, {
+  await patchEventRisk(eventId, {
     overallRisk: analysis.riskVerdict,
     plainSummary: analysis.plainSummary,
     privacyPolicyUrl: tabUrl,
@@ -224,8 +231,12 @@ async function handleAnalyzeCurrentPage(callerTabId?: number) {
     dpoEmail: analysis.dpoEmail ?? undefined,
   });
 
+  // Re-fetch event for side panel
+  const updatedState = await getState();
+  const updatedEvent = updatedState.events.find(e => e.id === eventId);
+
   // 6. Push findings to side panel via session storage — user reviews before anything is sent
-  setAnalysisState({ status: "ready", analysis, event, domain, truncated: pageTruncated });
+  setAnalysisState({ status: "ready", analysis, event: updatedEvent || event, domain, truncated: pageTruncated });
 
   const badgeColor = analysis.riskVerdict === "HIGH" ? "#EF4444"
     : analysis.riskVerdict === "MEDIUM" ? "#F59E0B"

@@ -44,7 +44,7 @@ export async function syncEvent(event: ConsentEvent): Promise<boolean> {
 
 export async function flushUnsynced(): Promise<void> {
   const state = await getState();
-  const unsynced = state.events.filter(e => !e.synced && (e.plainSummary || e.userAction === "granted"));
+  const unsynced = state.events.filter(e => !e.synced && e.userAction === "granted");
   
   if (unsynced.length === 0) return;
   

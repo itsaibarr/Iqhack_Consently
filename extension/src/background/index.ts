@@ -2,6 +2,8 @@ import { appendEvent, getState, updateEventAction, saveState, patchEventRisk, ma
 import { flushUnsynced, syncEvent, fetchUserSettings } from "./sync";
 import { ConsentEvent } from "../lib/types";
 import { analyzePageText } from "./privacyAnalyzer";
+import { detectProvider } from "./detector";
+import { parseOAuthUrl } from "./parser";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -55,6 +57,46 @@ chrome.action.onClicked.addListener((tab) => {
       console.error("[Consently] sidePanel.open failed:", err)
     );
   }
+});
+
+// ---------------------------------------------------------------------------
+// OAuth detection — tabs.onUpdated fires on every navigation
+// detectProvider + parseOAuthUrl were built but never wired up
+// ---------------------------------------------------------------------------
+
+const recentOAuthUrls = new Set<string>();
+
+chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
+  // changeInfo.url is set on the first URL change; fall back to tab.url on loading
+  const url = changeInfo.url ?? (changeInfo.status === "loading" ? tab.url : undefined);
+  if (!url) return;
+
+  const provider = detectProvider(url);
+  if (provider === "unknown") return;
+
+  // Deduplicate — the same URL fires multiple onUpdated events per navigation
+  if (recentOAuthUrls.has(url)) return;
+  recentOAuthUrls.add(url);
+  setTimeout(() => recentOAuthUrls.delete(url), 5000);
+
+  const event = parseOAuthUrl(url, provider);
+  if (!event) return;
+
+  (async () => {
+    await appendEvent(event);
+
+    const badgeColor = event.overallRisk === "HIGH" ? "#EF4444"
+      : event.overallRisk === "MEDIUM" ? "#F59E0B"
+      : "#14A89C";
+    chrome.action.setBadgeText({ text: "!" });
+    chrome.action.setBadgeBackgroundColor({ color: badgeColor });
+
+    const state = await getState();
+    if (state.userId || state.isDemoMode) {
+      const success = await syncEvent(event);
+      if (success) await markSynced(event.id);
+    }
+  })();
 });
 
 // ---------------------------------------------------------------------------

@@ -20,30 +20,6 @@ export interface PolicyAnalysis {
 
 
 // ---------------------------------------------------------------------------
-// JSON extraction — handles models that wrap JSON in prose
-// ---------------------------------------------------------------------------
-
-function extractJson(raw: string): Record<string, unknown> | null {
-  // 1. Strip code fences
-  const cleaned = raw.replace(/```(?:json)?\s*/g, "").replace(/```\s*/g, "").trim();
-
-  // 2. Try direct parse first
-  try {
-    return JSON.parse(cleaned);
-  } catch { /* continue */ }
-
-  // 3. Extract the first top-level {...} block from mixed prose
-  const match = cleaned.match(/\{[\s\S]*\}/);
-  if (match) {
-    try {
-      return JSON.parse(match[0]);
-    } catch { /* continue */ }
-  }
-
-  return null;
-}
-
-// ---------------------------------------------------------------------------
 // Fallback — build a basic analysis from the page text itself
 // ---------------------------------------------------------------------------
 

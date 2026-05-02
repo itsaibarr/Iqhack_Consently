@@ -18,10 +18,18 @@ export default function WelcomeView({ onSyncComplete }: WelcomeViewProps) {
       await saveState({ 
         handshakeComplete: true,
         userId: "demo@consently.ai",
+        userEmail: "demo@consently.ai",
+        accessToken: "demo-token",
         isDemoMode: true,
         events: [],
-        lastSyncAt: new Date().toISOString()
-      } as Parameters<typeof saveState>[0]);
+        lastSyncAt: new Date().toISOString(),
+        settings: {
+          stealth_mode: false,
+          notifications_enabled: true,
+          alert_frequency: "high_priority",
+          handshake_interval: 300
+        }
+      });
       onSyncComplete();
     }, 2000);
   };

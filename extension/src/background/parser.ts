@@ -1,6 +1,7 @@
 import { ConsentEvent, OAuthProvider } from "../lib/types";
 import { translateScope } from "../lib/scopes";
 import { computeOverallRisk } from "../lib/risk";
+import { getAppNameFromDomain, getBaseDomain } from "../lib/utils";
 
 export function parseOAuthUrl(urlStr: string, provider: OAuthProvider): ConsentEvent | null {
   try {
@@ -30,7 +31,7 @@ export function parseOAuthUrl(urlStr: string, provider: OAuthProvider): ConsentE
     try {
       if (redirectUri) {
         const rUrl = new URL(redirectUri);
-        appDomain = rUrl.hostname;
+        appDomain = getBaseDomain(rUrl.hostname);
       }
     } catch {}
 
@@ -73,7 +74,7 @@ export function parseOAuthUrl(urlStr: string, provider: OAuthProvider): ConsentE
       detectedAt: new Date().toISOString(),
       provider,
       appDomain,
-      appName: appDomain.split(".")[0].charAt(0).toUpperCase() + appDomain.split(".")[0].slice(1), // Simple title case
+      appName: getAppNameFromDomain(appDomain),
       clientId,
       scopesRaw,
       scopesTranslated,

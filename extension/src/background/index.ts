@@ -4,16 +4,12 @@ import { ConsentEvent } from "../lib/types";
 import { analyzePageText } from "./privacyAnalyzer";
 import { detectProvider } from "./detector";
 import { parseOAuthUrl } from "./parser";
+import { getAppNameFromDomain, getBaseDomain } from "../lib/utils";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function deriveAppName(domain: string): string {
-  const clean = domain.replace(/^www\./, "");
-  const firstPart = clean.split(".").slice(-2, -1)[0] ?? clean.split(".")[0];
-  return firstPart.charAt(0).toUpperCase() + firstPart.slice(1);
-}
 
 function buildShellEvent(domain: string): ConsentEvent {
   return {
@@ -21,7 +17,7 @@ function buildShellEvent(domain: string): ConsentEvent {
     detectedAt: new Date().toISOString(),
     provider: "unknown",
     appDomain: domain,
-    appName: deriveAppName(domain),
+    appName: getAppNameFromDomain(domain),
     clientId: "analyzed-via-policy-page",
     scopesRaw: [],
     scopesTranslated: [],
@@ -153,8 +149,9 @@ async function handleAnalyzeCurrentPage(callerTabId?: number) {
     return;
   }
 
-  const domain = new URL(tabUrl).hostname;
-  const appName = deriveAppName(domain);
+  const rawHostname = new URL(tabUrl).hostname;
+  const domain = getBaseDomain(rawHostname);
+  const appName = getAppNameFromDomain(domain);
 
   // 1. Get page text from content script (live DOM — no CORS, no fetch)
   let pageText: string | null = null;
@@ -346,7 +343,20 @@ chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => 
 
 async function handleScoutDiscovery(events: Partial<ConsentEvent>[]) {
   for (const eventData of events) {
-    const event: ConsentEvent = { id: crypto.randomUUID(), ...eventData, synced: false };
+    const event: ConsentEvent = {
+      id: crypto.randomUUID(),
+      detectedAt: new Date().toISOString(),
+      provider: "unknown",
+      appDomain: "unknown",
+      appName: "Unknown",
+      clientId: "unknown",
+      scopesRaw: [],
+      scopesTranslated: [],
+      overallRisk: "LOW",
+      userAction: "detected",
+      synced: false,
+      ...eventData,
+    };
     await appendEvent(event);
     await syncEvent(event);
   }

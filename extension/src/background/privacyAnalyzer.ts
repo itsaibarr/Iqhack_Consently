@@ -65,7 +65,7 @@ function extractEmailFromText(text: string): string | null {
 
   // Strategy B: If no specifically named email, look for emails in context (proximal to privacy keywords in text)
   // This is handled better by AI, but for fallback we take the first email found
-  return allEmails[0];
+  return allEmails[0] || null;
 }
 
 function buildFallback(appName: string, pageText: string): PolicyAnalysis {

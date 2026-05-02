@@ -7,12 +7,24 @@ export function parseOAuthUrl(urlStr: string, provider: OAuthProvider): ConsentE
     const url = new URL(urlStr);
     const params = url.searchParams;
 
-    const scopeRaw = params.get("scope") || params.get("scopes") || "";
-    if (!scopeRaw && provider !== "github") return null;
+    // Google accountchooser encodes the real OAuth params inside a 'continue' URL.
+    // Decode it and merge its params so scope/redirect_uri are always reachable.
+    let mergedParams = params;
+    const continueRaw = params.get("continue");
+    if (continueRaw) {
+      try {
+        const inner = new URL(decodeURIComponent(continueRaw));
+        // Merge inner params on top of outer (outer wins on conflict)
+        const combined = new URLSearchParams(inner.searchParams);
+        params.forEach((v, k) => combined.set(k, v));
+        mergedParams = combined;
+      } catch { /* ignore malformed continue URL */ }
+    }
 
-    const clientId = params.get("client_id") || params.get("clientid") || "";
-    const redirectUri = params.get("redirect_uri") || params.get("redirecturi") || "";
-    
+    const scopeRaw = mergedParams.get("scope") || mergedParams.get("scopes") || "";
+    const clientId = mergedParams.get("client_id") || mergedParams.get("clientid") || "";
+    const redirectUri = mergedParams.get("redirect_uri") || mergedParams.get("redirecturi") || "";
+
     // Extract app domain from redirect_uri
     let appDomain = "unknown";
     try {
@@ -25,7 +37,7 @@ export function parseOAuthUrl(urlStr: string, provider: OAuthProvider): ConsentE
     // Split and normalize scopes
     const scopesRaw = scopeRaw ? scopeRaw.split(/[ +]/).filter(Boolean) : [];
     const scopesTranslated = scopesRaw.map(translateScope);
-    
+
     // Ignore 1st-party logins and unknown apps where we can't analyze a policy
     const PROVIDER_DOMAINS = [
       "google.com",

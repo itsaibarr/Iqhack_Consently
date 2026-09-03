@@ -46,3 +46,6 @@ next-env.d.ts
 everything-claude-code/
 .agent/
 graphify-out/
+__pycache__/
+.idea/
+*.pyc

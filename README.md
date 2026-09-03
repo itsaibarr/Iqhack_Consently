@@ -1,5 +1,7 @@
 # Consently — Your Personal Consent OS
 
+Status: one-off from April and May 2026 (IQ hack), not maintained. Live: https://consently.vercel.app
+
 > *"Your data. Your rules."*
 >
 > Consently maps every digital service accessing your data, translates legal jargon into plain language, and lets you revoke access in one click.

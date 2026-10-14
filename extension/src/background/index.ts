@@ -299,8 +299,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // External Message Router (Web App → Extension auth handshake)
 // ---------------------------------------------------------------------------
 
+// Hostnames allowed to message the extension: localhost plus the configured
+// dashboard host (VITE_DASHBOARD_URL, defaulting to the public deployment).
+const DASHBOARD_HOSTNAME = (() => {
+  try {
+    return new URL(import.meta.env.VITE_DASHBOARD_URL || "https://consently.vercel.app").hostname;
+  } catch {
+    return "consently.vercel.app";
+  }
+})();
+const TRUSTED_HOSTNAMES = new Set(["localhost", DASHBOARD_HOSTNAME]);
+
 chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
-  const TRUSTED_HOSTNAMES = new Set(["localhost", "consently.vercel.app", "consently-itsaibarrs-projects.vercel.app", "consently-git-main-itsaibarrs-projects.vercel.app"]);
   let senderHostname: string | null = null;
   try {
     senderHostname = sender.url ? new URL(sender.url).hostname : null;

@@ -29,7 +29,7 @@ Sign in using the demo account:
 | Email | `demo@consently.ai` |
 | Password | `consently2024` |
 
-> On the login page, click **"Fill Credentials"** under the Demo Access banner to auto-fill — no typing needed.
+> On the login page, click **"Fill Credentials"** under the Demo Access banner to auto-fill — no typing needed. (Demo access requires the `DEMO_LOGIN_ENABLED` build flag to be on; see [Enabling the seeded demo](#enabling-the-seeded-demo-local-only) for running it yourself.)
 
 You will land on a dashboard pre-loaded with 38 real services (Anthropic, Spotify, Netflix, Airbnb, Canva, etc.), each with a risk score, data categories collected, and sharing partners.
 
@@ -113,7 +113,18 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The demo credentials (`demo@consently.ai` / `consently2024`) work locally too.
+Open [http://localhost:3000](http://localhost:3000).
+
+### Enabling the seeded demo (local only)
+
+The demo login shortcut (`demo@consently.ai` / `consently2024`) is **disabled by default**. To try it locally, copy `.env.example` to `.env.local`, set:
+
+```bash
+DEMO_LOGIN_ENABLED=true
+NEXT_PUBLIC_DEMO_LOGIN_ENABLED=true   # Next.js only exposes NEXT_PUBLIC_* to the browser
+```
+
+and restart `npm run dev`. Optionally apply `migrations/seed_demo_user.sql` to your Supabase project to seed the demo user and its mock data. Do not enable this on a production deployment.
 
 ### Extension (for local dashboard)
 

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { LucideShieldCheck, LucideLoader2, Eye, EyeOff } from "lucide-react";
-import { EXTENSION_ID, DEMO_USER_ID } from "@/lib/constants";
+import { EXTENSION_ID, DEMO_USER_ID, DEMO_LOGIN_ENABLED } from "@/lib/constants";
 
 // Declare chrome global for extension handshake
 declare const chrome: {
@@ -89,8 +89,9 @@ export default function AuthPage() {
     setLoading(true);
     setError(null);
 
-    // DEMO BYPASS: If credentials match the demo account, we set a flag and bypass real auth
-    if (!isSignUp && email === "demo@consently.ai" && password === "consently2024") {
+    // DEMO BYPASS: If credentials match the demo account, we set a flag and bypass real auth.
+    // Only available when DEMO_LOGIN_ENABLED is set (see .env.example).
+    if (!isSignUp && DEMO_LOGIN_ENABLED && email === "demo@consently.ai" && password === "consently2024") {
       console.log("[Consently] Demo credentials detected. Engaging bypass mode.");
       
       document.cookie = "consently_demo_mode=true; path=/; max-age=86400; SameSite=Lax";
@@ -219,8 +220,8 @@ export default function AuthPage() {
           </button>
         </div>
 
-        {/* Demo Account Hint */}
-        {!isSignUp && (
+        {/* Demo Account Hint (only when demo login is enabled) */}
+        {!isSignUp && DEMO_LOGIN_ENABLED && (
           <div className="mt-8 rounded-xl border border-primary-100 bg-primary-50/30 p-4">
             <div className="flex items-center gap-2 mb-2">
               <div className="flex h-5 w-5 items-center justify-center rounded-md bg-primary-500 text-white">

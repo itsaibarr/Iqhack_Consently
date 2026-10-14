@@ -44,9 +44,13 @@ export interface ActivityRecord {
   reason?: string;
 }
 
-// Extension Integration
-export const EXTENSION_ID = "kegngnalimkofmfaeefinlljgdhomgon";
-export const DASHBOARD_URL = "https://consently.vercel.app";
+// Extension Integration (env-overridable; see .env.example)
+export const EXTENSION_ID = process.env.NEXT_PUBLIC_EXTENSION_ID || "kegngnalimkofmfaeefinlljgdhomgon";
+export const DASHBOARD_URL = process.env.NEXT_PUBLIC_DASHBOARD_URL || "https://consently.vercel.app";
 
 // Standard Demo User ID (exists in auth.users)
 export const DEMO_USER_ID = "15e1f301-268a-434c-b4d5-8927fd698456";
+
+// Seeded demo login shortcut (demo@consently.ai) — disabled unless explicitly enabled.
+// Next.js only exposes NEXT_PUBLIC_* vars to the browser, so use that name here.
+export const DEMO_LOGIN_ENABLED = process.env.NEXT_PUBLIC_DEMO_LOGIN_ENABLED === "true";
